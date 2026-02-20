@@ -1,5 +1,5 @@
 import { exec, execSync, execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, createReadStream, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, createReadStream } from "node:fs";
 import { promisify } from "node:util";
 import process from "node:process";
 import * as readline from "node:readline";
@@ -816,7 +816,7 @@ export async function main() {
         fetchGitRepoInfo(projectDir),
         parseTranscriptFull(input.transcript_path),
         Promise.resolve(countConfigs(projectDir)),
-        config.features.usage ? getUsageData() : Promise.resolve(null),
+        getUsageData(),
     ];
 
     const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);

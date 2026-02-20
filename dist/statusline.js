@@ -702,7 +702,7 @@ export async function main() {
         fetchGitRepoInfo(projectDir),
         parseTranscriptFull(input.transcript_path),
         Promise.resolve(countConfigs(projectDir)),
-        config.features.usage ? getUsageData() : Promise.resolve(null),
+        getUsageData(),
     ];
     const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);
     const prInfo = gitInfo ? await fetchPrInfo() : null;

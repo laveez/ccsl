@@ -36,7 +36,12 @@ jobs:
         run: |
           git config --global user.name "demo"
           git config --global user.email "demo@example.com"
-          mkdir -p ~/.claude && echo '{}' > ~/.claude/statusline-config.json
+          mkdir -p ~/.claude
+          echo '{}' > ~/.claude/statusline-config.json
+          echo '{"botToken":"demo","chatId":0}' > ~/.cctg.json
+          touch ~/.cctg-active
+          date +%s > ~/.claude/.last-recall
+          echo '{"auto":true}' > ~/.claude/learning-mode.json
 
       - name: Generate demo assets
         run: |

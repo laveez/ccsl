@@ -128,6 +128,10 @@ ccsl is a [StatusLine command](https://docs.claude.com/en/docs/claude-code/setti
 
 \* Usage API is optional and requires `features.usage: true` in config.
 
+## See Also
+
+- **[cctg](https://github.com/laveez/cctg)** — Claude Code Telegram Gate. Approve tool calls, answer questions, and send follow-up instructions from your phone. When installed, ccsl shows the cctg mode as a statusline badge (enable with `features.cctg: true`).
+
 ## Acknowledgments
 
 Based on work by [Aaro Korhonen](https://github.com/aarokorhonen).

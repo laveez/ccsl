@@ -210,7 +210,7 @@ function ansiToHtml(text) {
 const htmlTemplate = body => `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body { background:#1a1b26; margin:0; padding:14px 16px;
-  font-family:'JetBrains Mono','Fira Code','SF Mono','Menlo',monospace,'Noto Color Emoji';
+  font-family:'JetBrains Mono','Fira Code','SF Mono','Menlo','Noto Color Emoji',monospace;
   font-size:13px; line-height:1.5; color:#c0caf5; }
 pre { margin:0; white-space:pre; font:inherit; }
 a { color:inherit; }
@@ -249,7 +249,8 @@ mkdirSync(DOCS_DIR, { recursive: true });
 
 for (const v of VARIANTS) {
     await page.goto(`http://localhost:18765/${v}.html`);
-    await page.waitForTimeout(200);
+    await page.waitForFunction(() => document.fonts.ready.then(() => true));
+    await page.waitForTimeout(300);
     const pre = await page.locator("pre").boundingBox();
     await page.screenshot({
         path: join(SCREENSHOTS, `${v}.png`),

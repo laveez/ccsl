@@ -32,8 +32,11 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get install -y ffmpeg
 
-      - name: Set up dummy Claude config
-        run: mkdir -p ~/.claude && echo '{}' > ~/.claude/statusline-config.json
+      - name: Set up git identity and dummy Claude config
+        run: |
+          git config --global user.name "demo"
+          git config --global user.email "demo@example.com"
+          mkdir -p ~/.claude && echo '{}' > ~/.claude/statusline-config.json
 
       - name: Generate demo assets
         run: |

@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "demo": "node scripts/generate-demo.mjs"
+    "demo": "node scripts/generate-demo.mjs",
+    "prepublishOnly": "npm run build"
   },
   "files": [
     "dist"

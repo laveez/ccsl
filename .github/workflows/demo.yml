@@ -32,9 +32,7 @@ jobs:
         run: npm install --no-save playwright && npx playwright install --with-deps chromium
 
       - name: Install ffmpeg and emoji font
-        run: |
-          sudo apt-get install -y ffmpeg fonts-noto-color-emoji
-          fc-cache -fv
+        run: sudo apt-get install -y ffmpeg fonts-noto-color-emoji
 
       - name: Set up git identity and dummy Claude config
         run: |

@@ -470,11 +470,11 @@ interface UsageCacheFile {
 }
 
 function getUsageCachePath(): string {
-    return join(homedir(), ".claude", "plugins", "unified-statusline", ".usage-cache.json");
+    return join(homedir(), ".claude", "plugins", "ccsl", ".usage-cache.json");
 }
 
 function getKeychainBackoffPath(): string {
-    return join(homedir(), ".claude", "plugins", "unified-statusline", ".keychain-backoff");
+    return join(homedir(), ".claude", "plugins", "ccsl", ".keychain-backoff");
 }
 
 function readUsageCache(now: number): UsageData | null {
@@ -618,7 +618,7 @@ function fetchUsageApi(accessToken: string): Promise<UsageApiResponse | null> {
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
                 "anthropic-beta": "oauth-2025-04-20",
-                "User-Agent": "unified-statusline/1.0",
+                "User-Agent": "ccsl/0.1.0",
             },
             timeout: 5000,
         };

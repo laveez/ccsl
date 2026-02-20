@@ -4,6 +4,10 @@
   "description": "A rich, information-dense statusline for Claude Code",
   "type": "module",
   "main": "dist/statusline.js",
+  "exports": {
+    ".": "./dist/statusline.js"
+  },
+  "author": "laveez",
   "bin": {
     "ccsl": "dist/bin/ccsl.js"
   },
@@ -32,6 +36,10 @@
     "url": "https://github.com/laveez/ccsl/issues"
   },
   "homepage": "https://github.com/laveez/ccsl#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=18.0.0"
   },

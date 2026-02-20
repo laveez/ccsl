@@ -6,6 +6,7 @@
 
 A rich, information-dense statusline for Claude Code.
 
+[![npm](https://img.shields.io/npm/v/ccsl?style=flat-square)](https://www.npmjs.com/package/ccsl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square)](https://nodejs.org)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen?style=flat-square)](#)
@@ -98,7 +99,7 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 | Option | Description | Default |
 |---|---|---|
 | `layout` | Layout mode (`dense`, `semantic`, `adaptive`) | `dense` |
-| `features.usage` | Show Anthropic API usage rate limit bar (requires Claude subscription credentials) | `false` |
+| `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
 | `features.learning` | Show recall/learn status badges (for custom learning loop integration) | `false` |
 | `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
 
@@ -127,6 +128,12 @@ flowchart TD
 ccsl is a [StatusLine command](https://docs.claude.com/en/docs/claude-code/settings#statusline) — Claude Code pipes a JSON object to stdin on every status update. ccsl gathers additional context (git state, transcript history, config files, optionally the usage API), renders everything as ANSI-colored badges, and writes the result to stdout.
 
 \* Usage API is optional and requires `features.usage: true` in config.
+
+## Privacy
+
+When `features.usage` is **disabled** (the default), ccsl reads only local files (git state, transcript, config). No network requests are made and no credentials are accessed.
+
+When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~/.claude/.credentials.json` (or macOS Keychain) to query the Anthropic usage API. The token is used solely for this request and is never stored, logged, or transmitted elsewhere.
 
 ## See Also
 

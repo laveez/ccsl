@@ -291,7 +291,7 @@ export function formatToolCall(toolName: string, input?: Record<string, unknown>
         let valueStr = typeof value === "string" ? value : JSON.stringify(value);
 
         if (cwd && filePathTools.has(toolName) && typeof value === "string") {
-            valueStr = makeRelativeToPath(value, cwd);
+            valueStr = makeRelativePath(value, cwd);
         }
 
         const maxLen = 80;
@@ -321,17 +321,6 @@ export function makeRelativePath(path: string, cwd: string): string {
     return path;
 }
 
-export function makeRelativeToPath(path: string, cwd: string): string {
-    const cwdNormalized = cwd.endsWith("/") ? cwd : cwd + "/";
-    if (path.startsWith(cwdNormalized)) {
-        return path.substring(cwdNormalized.length);
-    }
-    const home = homedir();
-    if (path.startsWith(home + "/")) {
-        return "~" + path.substring(home.length);
-    }
-    return path;
-}
 
 export const EMOJI_REPLACEMENTS: [RegExp, string][] = [
     [/\ud83e\udde0/g, "ctx"],     // 🧠

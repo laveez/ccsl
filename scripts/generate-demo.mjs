@@ -241,6 +241,8 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setViewportSize({ width: 1100, height: 600 });
 
+const SCREENSHOTS = join(TMP, "screenshots");
+mkdirSync(SCREENSHOTS);
 mkdirSync(DOCS_DIR, { recursive: true });
 
 for (const v of VARIANTS) {
@@ -248,7 +250,7 @@ for (const v of VARIANTS) {
     await page.waitForTimeout(200);
     const pre = await page.locator("pre").boundingBox();
     await page.screenshot({
-        path: join(DOCS_DIR, `${v}.png`),
+        path: join(SCREENSHOTS, `${v}.png`),
         clip: { x: 0, y: 0, width: Math.ceil(pre.x + pre.width + 16), height: Math.ceil(pre.y + pre.height + 14) },
         type: "png",
     });
@@ -264,14 +266,14 @@ console.log("==> Building animated GIF");
 
 let maxW = 0, maxH = 0;
 for (const v of VARIANTS) {
-    const dims = run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", join(DOCS_DIR, `${v}.png`)]);
+    const dims = run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=s=x:p=0", join(SCREENSHOTS, `${v}.png`)]);
     const [w, h] = dims.split("x").map(Number);
     if (w > maxW) maxW = w;
     if (h > maxH) maxH = h;
 }
 
 const ffmpegArgs = [];
-for (const v of VARIANTS) ffmpegArgs.push("-loop", "1", "-t", "3", "-i", join(DOCS_DIR, `${v}.png`));
+for (const v of VARIANTS) ffmpegArgs.push("-loop", "1", "-t", "3", "-i", join(SCREENSHOTS, `${v}.png`));
 
 const pads = VARIANTS.map((_, i) => `[${i}]pad=${maxW}:${maxH}:0:0:color=#1a1b26[v${i}]`).join(";");
 const concatIn = VARIANTS.map((_, i) => `[v${i}]`).join("");
@@ -280,8 +282,5 @@ const filter = `${pads};${concatIn}concat=n=${VARIANTS.length}:v=1:a=0[out];[out
 ffmpegArgs.push("-filter_complex", filter, "-y", join(DOCS_DIR, "demo.gif"));
 execFileSync("ffmpeg", ffmpegArgs, { stdio: "ignore" });
 
-console.log("==> Done!");
-for (const f of [...VARIANTS.map(v => `${v}.png`), "demo.gif"]) {
-    const size = run("ls", ["-lh", join(DOCS_DIR, f)]).split(/\s+/)[4];
-    console.log(`  ${f}: ${size}`);
-}
+const size = run("ls", ["-lh", join(DOCS_DIR, "demo.gif")]).split(/\s+/)[4];
+console.log(`==> Done! docs/demo.gif: ${size}`);

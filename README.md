@@ -20,25 +20,7 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ## Layouts
 
-### Dense (default)
-
-![Dense layout](docs/dense.png) ![Dense layout with optional features](docs/dense-full.png)
-
-Three fixed header rows (identity, context, git) plus detail rows for tools, agents, and tasks below a separator. Best for wide terminals.
-
-### Semantic
-
-![Semantic layout](docs/semantic.png) ![Semantic layout with optional features](docs/semantic-full.png)
-
-Groups badges by category, each on its own row. More readable at the cost of vertical space.
-
-### Adaptive
-
-![Adaptive layout](docs/adaptive.png) ![Adaptive layout with optional features](docs/adaptive-full.png)
-
-All badges flow into a single auto-wrapping stream. Minimal structure, maximum density.
-
-Badges have colored backgrounds — cost shifts from green to gold to red as spending increases, duration shifts from green to purple, and context/usage bars fill with green, yellow, or red.
+Three layout modes — **dense** (fixed header rows, default), **semantic** (one category per row), and **adaptive** (auto-wrapping stream). Badges have colored backgrounds that shift based on values — cost from green to red, duration from green to purple, context bars from green to yellow to red.
 
 ## Features
 

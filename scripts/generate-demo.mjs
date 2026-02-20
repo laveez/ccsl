@@ -11,7 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, resolve as pathResolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
@@ -210,7 +210,7 @@ function ansiToHtml(text) {
 const htmlTemplate = body => `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 body { background:#1a1b26; margin:0; padding:14px 16px;
-  font-family:'JetBrains Mono','Fira Code','SF Mono','Menlo',monospace;
+  font-family:'JetBrains Mono','Fira Code','SF Mono','Menlo',monospace,'Noto Color Emoji';
   font-size:13px; line-height:1.5; color:#c0caf5; }
 pre { margin:0; white-space:pre; font:inherit; }
 a { color:inherit; }
@@ -228,7 +228,7 @@ console.log("==> Taking screenshots with Playwright");
 await new Promise((resolve, reject) => {
     httpServer = createServer((req, res) => {
         try {
-            const safePath = resolve(RENDERS, req.url.slice(1));
+            const safePath = pathResolve(RENDERS, req.url.slice(1));
             if (!safePath.startsWith(RENDERS)) { res.writeHead(403); res.end(); return; }
             const content = readFileSync(safePath);
             res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

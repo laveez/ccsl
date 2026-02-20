@@ -39,7 +39,9 @@ export function stripAnsi(str: string): string {
 
 // Strip XML-like tags and clean up error messages
 export function cleanErrorMessage(str: string): string {
-    let cleaned = str.replace(/<[^>]+>/g, "");
+    let cleaned = str;
+    let prev;
+    do { prev = cleaned; cleaned = cleaned.replace(/<[^>]+>/g, ""); } while (cleaned !== prev);
     cleaned = cleaned.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
     cleaned = cleaned.replace(/\.\s*Current working directory:\s*\S+/i, "");
     return cleaned;

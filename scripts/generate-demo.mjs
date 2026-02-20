@@ -11,7 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 
@@ -228,7 +228,9 @@ console.log("==> Taking screenshots with Playwright");
 await new Promise((resolve, reject) => {
     httpServer = createServer((req, res) => {
         try {
-            const content = readFileSync(join(RENDERS, req.url.slice(1)));
+            const safePath = resolve(RENDERS, req.url.slice(1));
+            if (!safePath.startsWith(RENDERS)) { res.writeHead(403); res.end(); return; }
+            const content = readFileSync(safePath);
             res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
             res.end(content);
         } catch { res.writeHead(404); res.end(); }

@@ -1,4 +1,4 @@
-import { exec, execSync, execFileSync } from "node:child_process";
+import { execFile, execSync, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, createReadStream } from "node:fs";
 import { promisify } from "node:util";
 import process from "node:process";
@@ -29,7 +29,7 @@ import {
 } from "./utils.js";
 import { buildStatuslineOutput, readStatuslineConfig } from "./render.js";
 
-const execP = promisify(exec);
+const execFileP = promisify(execFile);
 
 // ============================================================================
 // Git Functions
@@ -38,7 +38,7 @@ const execP = promisify(exec);
 async function getGitFileStats(projectDir: string): Promise<GitFileStats> {
     const stats: GitFileStats = { modified: 0, added: 0, deleted: 0, untracked: 0 };
     try {
-        const { stdout } = await execP(`git -C "${projectDir}" status --porcelain`);
+        const { stdout } = await execFileP("git", ["-C", projectDir, "status", "--porcelain"]);
         const lines = stdout.trim().split("\n").filter(line => line.length > 0);
 
         for (const line of lines) {
@@ -62,8 +62,8 @@ async function getGitFileStats(projectDir: string): Promise<GitFileStats> {
 async function getAheadBehind(projectDir: string): Promise<{ ahead: number; behind: number }> {
     try {
         const [aheadResult, behindResult] = await Promise.all([
-            execP(`git -C "${projectDir}" rev-list --count @{u}..HEAD`),
-            execP(`git -C "${projectDir}" rev-list --count HEAD..@{u}`),
+            execFileP("git", ["-C", projectDir, "rev-list", "--count", "@{u}..HEAD"]),
+            execFileP("git", ["-C", projectDir, "rev-list", "--count", "HEAD..@{u}"]),
         ]);
         return {
             ahead: parseInt(aheadResult.stdout.trim(), 10) || 0,
@@ -76,7 +76,7 @@ async function getAheadBehind(projectDir: string): Promise<{ ahead: number; behi
 
 async function getCurrentBranch(projectDir: string): Promise<string> {
     try {
-        const { stdout } = await execP(`git -C "${projectDir}" rev-parse --abbrev-ref HEAD`);
+        const { stdout } = await execFileP("git", ["-C", projectDir, "rev-parse", "--abbrev-ref", "HEAD"]);
         return stdout.trim();
     } catch {
         return "";
@@ -85,8 +85,8 @@ async function getCurrentBranch(projectDir: string): Promise<string> {
 
 async function getLinkedWorktreeCommonDir(projectDir: string): Promise<string | null> {
     try {
-        const { stdout: gitDir } = await execP(`git -C "${projectDir}" rev-parse --git-dir`);
-        const { stdout: commonDir } = await execP(`git -C "${projectDir}" rev-parse --git-common-dir`);
+        const { stdout: gitDir } = await execFileP("git", ["-C", projectDir, "rev-parse", "--git-dir"]);
+        const { stdout: commonDir } = await execFileP("git", ["-C", projectDir, "rev-parse", "--git-common-dir"]);
 
         const gitDirPath = gitDir.trim();
         const commonDirPath = commonDir.trim();
@@ -102,7 +102,7 @@ async function getLinkedWorktreeCommonDir(projectDir: string): Promise<string | 
 
 export async function fetchGitRepoInfo(projectDir: string): Promise<GitRepoInfo | null> {
     try {
-        const { stdout: toplevel } = await execP(`git -C "${projectDir}" rev-parse --show-toplevel`);
+        const { stdout: toplevel } = await execFileP("git", ["-C", projectDir, "rev-parse", "--show-toplevel"]);
 
         const [fileStats, aheadBehind, commonDir, branch] = await Promise.all([
             getGitFileStats(projectDir),
@@ -151,8 +151,8 @@ export async function fetchGitRepoInfo(projectDir: string): Promise<GitRepoInfo 
 
 export async function fetchPrInfo(): Promise<PrInfo | null> {
     try {
-        const { stdout } = await execP(
-            "gh pr view --json=number,url,title,isDraft,state,mergeStateStatus",
+        const { stdout } = await execFileP(
+            "gh", ["pr", "view", "--json=number,url,title,isDraft,state,mergeStateStatus"],
         );
         const parsed = JSON.parse(stdout);
         return {

@@ -1,0 +1,20 @@
+{
+  "name": "ccsl",
+  "version": "0.1.0",
+  "description": "Claude Code Statusline \u2014 a rich, information-dense terminal statusline for Claude Code",
+  "type": "module",
+  "main": "dist/statusline.js",
+  "bin": { "ccsl": "dist/bin/ccsl.js" },
+  "scripts": { "build": "tsc", "dev": "tsc --watch" },
+  "files": ["dist"],
+  "keywords": ["claude", "claude-code", "statusline", "terminal", "cli"],
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/laveez/ccsl.git" },
+  "bugs": { "url": "https://github.com/laveez/ccsl/issues" },
+  "homepage": "https://github.com/laveez/ccsl#readme",
+  "engines": { "node": ">=18.0.0" },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
+}

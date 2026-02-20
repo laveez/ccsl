@@ -22,20 +22,40 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 Three layout modes — **dense** (fixed header rows, default), **semantic** (one category per row), and **adaptive** (auto-wrapping stream). Badges have colored backgrounds that shift based on values — cost from green to red, duration from green to purple, context bars from green to yellow to red.
 
-## Features
+## Badge Reference
 
-- **Context window bar** — visual progress bar with token counts, cache breakdown (read/write/uncached), and color-coded fill
-- **Gradient badges** — cost, duration, and usage badges shift color based on value thresholds
-- **Git integration** — repo name, branch/worktree, file stats (modified/added/deleted/untracked), ahead/behind counts, lines changed
-- **PR status** — clickable PR link with status indicator (draft, open, mergeable, merged, closed)
-- **Tool tracking** — running tools with targets, completed tool counts grouped by type, MCP tools grouped by server
-- **Sub-agent tracking** — running and recently completed Task agents with duration and description
-- **Task progress** — current in-progress task subject with completion count
-- **Transcript link** — clickable `file://` hyperlink to the session transcript
-- **Usage rate limit bar** — Anthropic API utilization with reset timer (requires Claude subscription credentials)
-- **Config summary** — counts of CLAUDE.md files, MCP servers, and hooks across user and project scopes
-- **Narrow terminal support** — emojis automatically replaced with text abbreviations below 80 columns
-- **Zero dependencies** — pure Node.js, no external packages
+![Badge reference](docs/badge-reference.png)
+
+Every badge the statusline can show, with all possible states:
+
+| Badge | Description | States |
+|---|---|---|
+| **Model / Plan** | Current Claude model and subscription plan | `Opus`, `Sonnet \| Pro`, `Opus \| Max` |
+| **Duration** | Session wall-clock time. Background shifts green → gold → purple | `30s`, `12m`, `1h 30m`, `3h` |
+| **Cost** | Cumulative API cost. Background shifts green → gold → orange → red | `$0.42`, `$4.82`, `$50`, `$123` |
+| **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
+| **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
+| **Usage rate limit** | Anthropic API utilization with reset timer | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red |
+| **Repo name** | Git repository name | `ccsl`, `my-project` |
+| **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
+| **File stats** | Dirty file counts: modified (!), added (+), deleted (✘), untracked (?) | `!3`, `!1+2?4`, `!5+3✘1?2` |
+| **Ahead / Behind** | Commits ahead/behind remote tracking branch | `↑3`, `↓2`, `↑5↓1` |
+| **Lines changed** | Total lines added (green) and removed (red) in session | `📊 +284-67` |
+| **Config summary** | Counts of CLAUDE.md files, MCP servers, and hooks | `📋 2 CLAUDE.md \| 5 MCPs \| 3 hooks` |
+| **Ticket marker** | Jira-style ticket ID extracted from PR title | `🎫 PROJ-123` |
+| **PR link** | Clickable PR with status: Draft, Open, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(✅)`, `(M)`, `(C)` |
+| **Recall status** | Whether `/recall` was run this session | `🧩 ✓` (recalled), `🧩 ✗` (not recalled) |
+| **Learn status** | Last `/learn` run date or warning if pending | `📚 today`, `📚 7d ago`, `📚 ⚠` (pending) |
+| **CCTG** | [cctg](https://github.com/laveez/cctg) Telegram gate status | `📱 ON`, `📱 off` |
+| **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |
+| **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
+| **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
+| **MCP tools** | MCP tool counts grouped by server | `🔌playwright×6`, `🔌context7×3` |
+| **Running agent** | Active Task subagent with elapsed time | `◐ feature Review auth… 2m 30s` |
+| **Completed agents** | Recent finished agents (max 2) with duration | `✓ feature Review auth… 2m` |
+| **Tasks** | Current task from TodoWrite with progress | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
+
+Badges marked with `features.*` in the reference image require the corresponding feature toggle in config.
 
 ## Quick Start
 

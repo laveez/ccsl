@@ -36,7 +36,9 @@ jobs:
         run: mkdir -p ~/.claude && echo '{}' > ~/.claude/statusline-config.json
 
       - name: Generate demo assets
-        run: node scripts/generate-demo.mjs
+        run: |
+          node scripts/generate-demo.mjs
+          node scripts/generate-badge-reference.mjs
 
       - name: Check for changes
         id: changes

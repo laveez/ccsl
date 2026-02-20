@@ -16,19 +16,27 @@ A rich, information-dense statusline for Claude Code.
 
 ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI badge display. It shows your model and plan, session duration, cost, context window usage, git status, file changes, PR links, active tools, sub-agents, task progress, and more — all rendered as compact badges with gradient backgrounds that shift color based on values.
 
-## Example
+## Layouts
 
-The dense layout (default) renders like this:
+### Dense (default)
 
-```
- Opus 4 | Max   ⏲ 12m 34s   💸 $1.24   🧩 ✓   📚 today
- 🧠 ██████░░░░ 45k=45%   🔥 120kr·8.2kw·3.1ku   📋 2 CLAUDE.md | 3 MCPs | 2 hooks
- my-project   🌿 feature/auth   !3+1?2   ↑2   📊 +142-38   🔗 PR#47 (✅)
-────────────────────────────────────────────────────────────
- 📝 abc12…jsonl   Read×24  Edit×8  Bash×12  Grep×6  Glob×4  🔌playwright×3
-```
+![Dense layout](docs/dense.png)
 
-Each badge has a colored background — cost badges shift from green to gold to red as spending increases, duration badges shift from green to purple over time, and context/usage bars fill with green, yellow, or red segments.
+Three fixed header rows (identity, context, git) plus detail rows for tools, agents, and tasks below a separator. Best for wide terminals.
+
+### Semantic
+
+![Semantic layout](docs/semantic.png)
+
+Groups badges by category, each on its own row. More readable at the cost of vertical space.
+
+### Adaptive
+
+![Adaptive layout](docs/adaptive.png)
+
+All badges flow into a single auto-wrapping stream. Minimal structure, maximum density.
+
+Badges have colored backgrounds — cost shifts from green to gold to red as spending increases, duration shifts from green to purple, and context/usage bars fill with green, yellow, or red.
 
 ## Features
 
@@ -89,12 +97,6 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 | `features.usage` | Show Anthropic API usage rate limit bar (requires Claude subscription credentials) | `false` |
 | `features.learning` | Show recall/learn status badges (for custom learning loop integration) | `false` |
 | `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
-
-## Layouts
-
-- **Dense** — packs the most information into 3 header rows plus detail rows. Identity, context, and git each get a row, with tools and agents below a separator. Best for wide terminals.
-- **Semantic** — groups badges by category, each on its own row (identity, context, git, config/PR, learning). More readable at the cost of vertical space.
-- **Adaptive** — flows all badges into a single auto-wrapping stream. Minimal structure, maximum density.
 
 ## How It Works
 

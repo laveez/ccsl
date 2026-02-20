@@ -828,7 +828,7 @@ export async function main() {
         : null;
 
     const maybeTerminalWidth = getTerminalWidth();
-    const termWidth = maybeTerminalWidth || process.stdout.columns || 75;
+    const termWidth = maybeTerminalWidth || process.stdout.columns || parseInt(process.env.COLUMNS || "0") || 75;
     const maxWidth = Math.min(termWidth - 4, 140);
 
     const data: UnifiedStatuslineData = {

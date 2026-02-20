@@ -4,7 +4,7 @@
 
 **Claude Code Statusline**
 
-A rich, information-dense terminal statusline for Claude Code.
+A rich, information-dense statusline for Claude Code.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
 [![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-brightgreen?style=flat-square)](https://nodejs.org)

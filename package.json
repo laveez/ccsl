@@ -1,7 +1,7 @@
 {
   "name": "ccsl",
   "version": "0.1.0",
-  "description": "Claude Code Statusline \u2014 a rich, information-dense terminal statusline for Claude Code",
+  "description": "A rich, information-dense statusline for Claude Code",
   "type": "module",
   "main": "dist/statusline.js",
   "bin": { "ccsl": "dist/bin/ccsl.js" },

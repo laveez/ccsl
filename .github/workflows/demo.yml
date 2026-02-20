@@ -6,6 +6,7 @@ on:
     paths:
       - 'src/**'
       - 'scripts/generate-demo.mjs'
+      - 'scripts/generate-badge-reference.mjs'
       - '.github/workflows/demo.yml'
   workflow_dispatch:
 

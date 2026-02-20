@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import process from "node:process";
 import * as readline from "node:readline";
 import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { homedir, platform } from "node:os";
 import * as https from "node:https";
 
@@ -30,6 +31,8 @@ import {
 import { buildStatuslineOutput, readStatuslineConfig } from "./render.js";
 
 const execFileP = promisify(execFile);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG_VERSION: string = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf8")).version;
 
 // ============================================================================
 // Git Functions
@@ -353,28 +356,8 @@ function countHooksInFile(filePath: string): number {
     return 0;
 }
 
-function countRulesInDir(rulesDir: string): number {
-    if (!existsSync(rulesDir)) return 0;
-    let count = 0;
-    try {
-        const entries = readdirSync(rulesDir, { withFileTypes: true });
-        for (const entry of entries) {
-            const fullPath = join(rulesDir, entry.name);
-            if (entry.isDirectory()) {
-                count += countRulesInDir(fullPath);
-            } else if (entry.isFile() && entry.name.endsWith(".md")) {
-                count++;
-            }
-        }
-    } catch {
-        // Ignore read errors
-    }
-    return count;
-}
-
 export function countConfigs(cwd?: string): ConfigCounts {
     let claudeMdCount = 0;
-    let rulesCount = 0;
     let hooksCount = 0;
 
     const homeDir = homedir();
@@ -387,8 +370,6 @@ export function countConfigs(cwd?: string): ConfigCounts {
     if (existsSync(join(claudeDir, "CLAUDE.md"))) {
         claudeMdCount++;
     }
-    rulesCount += countRulesInDir(join(claudeDir, "rules"));
-
     const userSettings = join(claudeDir, "settings.json");
     for (const name of getMcpServerNames(userSettings)) {
         userMcpServers.add(name);
@@ -411,8 +392,6 @@ export function countConfigs(cwd?: string): ConfigCounts {
         if (existsSync(join(cwd, "CLAUDE.local.md"))) claudeMdCount++;
         if (existsSync(join(cwd, ".claude", "CLAUDE.md"))) claudeMdCount++;
         if (existsSync(join(cwd, ".claude", "CLAUDE.local.md"))) claudeMdCount++;
-
-        rulesCount += countRulesInDir(join(cwd, ".claude", "rules"));
 
         const mcpJsonServers = getMcpServerNames(join(cwd, ".mcp.json"));
 
@@ -439,7 +418,7 @@ export function countConfigs(cwd?: string): ConfigCounts {
     }
 
     const mcpCount = userMcpServers.size + projectMcpServers.size;
-    return { claudeMdCount, rulesCount, mcpCount, hooksCount };
+    return { claudeMdCount, mcpCount, hooksCount };
 }
 
 // ============================================================================
@@ -618,7 +597,7 @@ function fetchUsageApi(accessToken: string): Promise<UsageApiResponse | null> {
             headers: {
                 "Authorization": `Bearer ${accessToken}`,
                 "anthropic-beta": "oauth-2025-04-20",
-                "User-Agent": "ccsl/0.1.0",
+                "User-Agent": `ccsl/${PKG_VERSION}`,
             },
             timeout: 5000,
         };

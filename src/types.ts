@@ -26,7 +26,6 @@ export interface StatuslineInput {
 
 export interface ConfigCounts {
     claudeMdCount: number;
-    rulesCount: number;
     mcpCount: number;
     hooksCount: number;
 }
@@ -92,16 +91,6 @@ export interface PrInfo {
     isDraft?: boolean;
     state?: string;
     mergeStateStatus?: string;
-}
-
-export interface ToolInfo {
-    name: string;
-    input?: Record<string, unknown>;
-    result?: string;
-    isSuccess?: boolean;
-    isError?: boolean;
-    errorMessage?: string;
-    durationMs?: number;
 }
 
 export interface LearningStatus {

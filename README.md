@@ -19,9 +19,18 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ![Demo](docs/demo.gif)
 
+### Contents
+
+- [Layouts](#layouts) · [Badge Reference](#badge-reference) · [Quick Start](#quick-start) · [Configuration](#configuration)
+- [How It Works](#how-it-works) · [Privacy](#privacy) · [See Also](#see-also) · [Contributing](#contributing)
+
+---
+
 ## Layouts
 
 Three layout modes — **dense** (fixed header rows, default), **semantic** (one category per row), and **adaptive** (auto-wrapping stream). Badges have colored backgrounds that shift based on values — cost from green to red, duration from green to purple, context bars from green to yellow to red.
+
+---
 
 ## Badge Reference
 
@@ -52,11 +61,13 @@ Every badge the statusline can show, with all possible states:
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
 | **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
 | **MCP tools** | MCP tool counts grouped by server | `🔌playwright×6`, `🔌context7×3` |
-| **Running agent** | Active Task subagent with elapsed time | `◐ feature Review auth… 2m 30s` |
+| **Running agent** | Active Task subagent with elapsed time | `◐ feature Review auth… (2m 30s)` |
 | **Completed agents** | Recent finished agents (max 2) with duration | `✓ feature Review auth… 2m` |
 | **Tasks** | Current task from TodoWrite with progress | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
 
-Badges marked with `features.*` in the reference image require the corresponding feature toggle in config.
+> **Note:** Badges marked with `features.*` in the reference image require the corresponding feature toggle in config.
+
+---
 
 ## Quick Start
 
@@ -81,6 +92,8 @@ Add to your `~/.claude/settings.json`:
 
 That's it. Claude Code will pipe status data to ccsl on every update.
 
+---
+
 ## Configuration
 
 Create `~/.claude/statusline-config.json` to customize behavior:
@@ -102,6 +115,8 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 | `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
 | `features.learning` | Show recall/learn status badges (for custom learning loop integration) | `false` |
 | `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
+
+---
 
 ## How It Works
 
@@ -125,15 +140,19 @@ flowchart TD
     style G fill:#5f3a1c
 ```
 
-ccsl is a [StatusLine command](https://docs.claude.com/en/docs/claude-code/settings#statusline) — Claude Code pipes a JSON object to stdin on every status update. ccsl gathers additional context (git state, transcript history, config files, optionally the usage API), renders everything as ANSI-colored badges, and writes the result to stdout.
+ccsl is a [StatusLine command](https://code.claude.com/docs/en/settings) — Claude Code pipes a JSON object to stdin on every status update. ccsl gathers additional context (git state, transcript history, config files, optionally the usage API), renders everything as ANSI-colored badges, and writes the result to stdout.
 
 \* Usage API is optional and requires `features.usage: true` in config.
+
+---
 
 ## Privacy
 
 When `features.usage` is **disabled** (the default), ccsl reads only local files (git state, transcript, config). No network requests are made and no credentials are accessed.
 
 When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~/.claude/.credentials.json` (or macOS Keychain) to query the Anthropic usage API. The token is used solely for this request and is never stored, logged, or transmitted elsewhere.
+
+---
 
 ## See Also
 
@@ -142,6 +161,8 @@ When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~
 ## Acknowledgments
 
 Based on work by [Aaro Korhonen](https://github.com/aarokorhonen).
+
+---
 
 ## Contributing
 

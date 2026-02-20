@@ -1,0 +1,57 @@
+name: Generate Demo Assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'scripts/generate-demo.mjs'
+
+jobs:
+  generate-demo:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Build ccsl
+        run: npm run build
+
+      - name: Install Playwright (not a project dependency)
+        run: npm install --no-save playwright && npx playwright install --with-deps chromium
+
+      - name: Install ffmpeg
+        run: sudo apt-get install -y ffmpeg
+
+      - name: Set up dummy Claude config
+        run: mkdir -p ~/.claude && echo '{}' > ~/.claude/statusline-config.json
+
+      - name: Generate demo assets
+        run: node scripts/generate-demo.mjs
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add docs/
+          if git diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated assets
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "Chore: regenerate demo assets"
+          git push

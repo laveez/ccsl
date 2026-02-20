@@ -16,23 +16,25 @@ A rich, information-dense statusline for Claude Code.
 
 ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI badge display. It shows your model and plan, session duration, cost, context window usage, git status, file changes, PR links, active tools, sub-agents, task progress, and more — all rendered as compact badges with gradient backgrounds that shift color based on values.
 
+![Demo](docs/demo.gif)
+
 ## Layouts
 
 ### Dense (default)
 
-![Dense layout](docs/dense.png)
+![Dense layout](docs/dense.png) ![Dense layout with optional features](docs/dense-full.png)
 
 Three fixed header rows (identity, context, git) plus detail rows for tools, agents, and tasks below a separator. Best for wide terminals.
 
 ### Semantic
 
-![Semantic layout](docs/semantic.png)
+![Semantic layout](docs/semantic.png) ![Semantic layout with optional features](docs/semantic-full.png)
 
 Groups badges by category, each on its own row. More readable at the cost of vertical space.
 
 ### Adaptive
 
-![Adaptive layout](docs/adaptive.png)
+![Adaptive layout](docs/adaptive.png) ![Adaptive layout with optional features](docs/adaptive-full.png)
 
 All badges flow into a single auto-wrapping stream. Minimal structure, maximum density.
 

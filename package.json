@@ -4,17 +4,38 @@
   "description": "A rich, information-dense statusline for Claude Code",
   "type": "module",
   "main": "dist/statusline.js",
-  "bin": { "ccsl": "dist/bin/ccsl.js" },
-  "scripts": { "build": "tsc", "dev": "tsc --watch" },
-  "files": ["dist"],
-  "keywords": ["claude", "claude-code", "statusline", "terminal", "cli"],
+  "bin": {
+    "ccsl": "dist/bin/ccsl.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "demo": "node scripts/generate-demo.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "statusline",
+    "terminal",
+    "cli"
+  ],
   "license": "MIT",
-  "repository": { "type": "git", "url": "git+https://github.com/laveez/ccsl.git" },
-  "bugs": { "url": "https://github.com/laveez/ccsl/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laveez/ccsl.git"
+  },
+  "bugs": {
+    "url": "https://github.com/laveez/ccsl/issues"
+  },
   "homepage": "https://github.com/laveez/ccsl#readme",
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
   }
 }

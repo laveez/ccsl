@@ -6,6 +6,8 @@ on:
     paths:
       - 'src/**'
       - 'scripts/generate-demo.mjs'
+      - '.github/workflows/demo.yml'
+  workflow_dispatch:
 
 jobs:
   generate-demo:

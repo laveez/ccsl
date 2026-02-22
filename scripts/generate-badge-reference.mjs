@@ -166,6 +166,11 @@ badges.push(row("Learn status",
     badge("📚 ⚠", C.rose),
     badge("📚", C.steel),
 ));
+badges.push(row("Instinct status",
+    badge("🧬 21", C.steel),
+    badge("🧬 21 ▲3", C.gold),
+    badge("🧬 21 !", C.rose),
+));
 
 // ── CCTG (optional) ──
 badges.push(section("CCTG &nbsp;<span class=\"feature-tag\">features.cctg</span>"));

@@ -18,6 +18,7 @@ import type {
     TodoItem,
     UnifiedStatuslineData,
     LearningStatus,
+    InstinctStatus,
     ConfigCounts,
     UsageData,
     CcslConfig,
@@ -674,6 +675,50 @@ export async function getUsageData(): Promise<UsageData | null> {
 // Learning Loop Status
 // ============================================================================
 
+function getInstinctStatus(claudeDir: string): InstinctStatus | null {
+    try {
+        const instinctsPath = join(claudeDir, "instincts.json");
+        if (!existsSync(instinctsPath)) return null;
+
+        const instincts: Array<{
+            confidence?: number;
+            seen_count?: number;
+            evolved_to?: string | null;
+        }> = JSON.parse(readFileSync(instinctsPath, "utf8"));
+
+        if (!Array.isArray(instincts)) return null;
+
+        const activeCount = instincts.length;
+        const promotableCount = instincts.filter(i =>
+            (i.confidence ?? 0) >= 0.8 &&
+            (i.seen_count ?? 0) >= 3 &&
+            i.evolved_to === null
+        ).length;
+
+        let correctionsThisSession = 0;
+        const obsPath = join(claudeDir, ".observations.jsonl");
+        const markerPath = join(claudeDir, ".observer.marker");
+        if (existsSync(obsPath)) {
+            const obsContent = readFileSync(obsPath, "utf8");
+            const allLines = obsContent.trim().split("\n").filter(l => l.length > 0);
+
+            let markerLine = 0;
+            if (existsSync(markerPath)) {
+                markerLine = parseInt(readFileSync(markerPath, "utf8").trim(), 10) || 0;
+            }
+
+            const unprocessed = allLines.slice(markerLine);
+            for (const line of unprocessed) {
+                if (line.includes('"correction"')) correctionsThisSession++;
+            }
+        }
+
+        return { activeCount, promotableCount, correctionsThisSession };
+    } catch {
+        return null;
+    }
+}
+
 export function getLearningStatus(sessionStart: Date | undefined): LearningStatus {
     const claudeDir = join(homedir(), ".claude");
 
@@ -716,7 +761,9 @@ export function getLearningStatus(sessionStart: Date | undefined): LearningStatu
         }
     } catch { /* ignore */ }
 
-    return { recalledThisSession, learningPending, autoLearn, lastLearnedDate };
+    const instinctStatus = getInstinctStatus(claudeDir);
+
+    return { recalledThisSession, learningPending, autoLearn, lastLearnedDate, instinctStatus };
 }
 
 // ============================================================================

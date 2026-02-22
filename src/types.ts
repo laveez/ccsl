@@ -93,11 +93,18 @@ export interface PrInfo {
     mergeStateStatus?: string;
 }
 
+export interface InstinctStatus {
+    activeCount: number;
+    promotableCount: number;
+    correctionsThisSession: number;
+}
+
 export interface LearningStatus {
     recalledThisSession: boolean;
     learningPending: boolean;
     autoLearn: boolean;
     lastLearnedDate: string | null;
+    instinctStatus: InstinctStatus | null;
 }
 
 export interface UnifiedStatuslineData {

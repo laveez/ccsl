@@ -56,6 +56,7 @@ Every badge the statusline can show, with all possible states:
 | **PR link** | Clickable PR with status: Draft, Open, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(✅)`, `(M)`, `(C)` |
 | **Recall status** | Whether `/recall` was run this session | `🧩 ✓` (recalled), `🧩 ✗` (not recalled) |
 | **Learn status** | Last `/learn` run date or warning if pending | `📚 today`, `📚 7d ago`, `📚 ⚠` (pending) |
+| **Instinct status** | Active instinct count with promotion/correction indicators | `🧬 21` (normal), `🧬 21 ▲3` (3 promotable), `🧬 21 !` (corrections detected) |
 | **CCTG** | [cctg](https://github.com/laveez/cctg) Telegram gate status | `📱 ON`, `📱 off` |
 | **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
@@ -113,7 +114,7 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 |---|---|---|
 | `layout` | Layout mode (`dense`, `semantic`, `adaptive`) | `dense` |
 | `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
-| `features.learning` | Show recall/learn status badges (for custom learning loop integration) | `false` |
+| `features.learning` | Show recall/learn/instinct status badges (for custom learning loop integration) | `false` |
 | `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
 
 ---

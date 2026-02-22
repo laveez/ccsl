@@ -233,6 +233,21 @@ function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
         badges.push(badge("steel", "📚"));
     }
 
+    const inst = learningStatus.instinctStatus;
+    if (inst) {
+        let text = `🧬 ${inst.activeCount}`;
+        let color: BadgeColor = "steel";
+        if (inst.promotableCount > 0) {
+            text += ` ▲${inst.promotableCount}`;
+            color = "gold";
+        }
+        if (inst.correctionsThisSession > 0) {
+            text += " !";
+            color = "rose";
+        }
+        badges.push(badge(color, text));
+    }
+
     return badges;
 }
 

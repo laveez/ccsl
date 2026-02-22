@@ -45,6 +45,7 @@ jobs:
           touch ~/.cctg-active
           date +%s > ~/.claude/.last-recall
           echo '{"auto":true}' > ~/.claude/learning-mode.json
+          python3 -c "import json; print(json.dumps([{'id':f'inst-{i}','confidence':0.9 if i<18 else 0.85,'seen_count':10 if i<18 else 4,'evolved_to':'claude-md' if i<18 else None} for i in range(21)]))" > ~/.claude/instincts.json
 
       - name: Generate demo assets
         run: |

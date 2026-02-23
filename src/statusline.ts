@@ -696,6 +696,7 @@ function getInstinctStatus(claudeDir: string): InstinctStatus | null {
         ).length;
 
         let correctionsThisSession = 0;
+        let unprocessedObservations = 0;
         const obsPath = join(claudeDir, ".observations.jsonl");
         const markerPath = join(claudeDir, ".observer.marker");
         if (existsSync(obsPath)) {
@@ -708,12 +709,13 @@ function getInstinctStatus(claudeDir: string): InstinctStatus | null {
             }
 
             const unprocessed = allLines.slice(markerLine);
+            unprocessedObservations = unprocessed.length;
             for (const line of unprocessed) {
                 if (line.includes('"correction"')) correctionsThisSession++;
             }
         }
 
-        return { activeCount, promotableCount, correctionsThisSession };
+        return { activeCount, promotableCount, correctionsThisSession, unprocessedObservations };
     } catch {
         return null;
     }
@@ -745,18 +747,23 @@ export function getLearningStatus(sessionStart: Date | undefined): LearningStatu
 
     let lastLearnedDate: string | null = null;
     try {
-        const log = readFileSync(join(claudeDir, "learning-log.md"), "utf8");
-        const match = log.match(/^## (\d{4})-(\d{2})-(\d{2})/m);
-        if (match) {
-            const logDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const yesterday = new Date(today.getTime() - 86400000);
-            if (logDate >= today) lastLearnedDate = "today";
-            else if (logDate >= yesterday) lastLearnedDate = "yesterday";
-            else {
-                const diffDays = Math.floor((now.getTime() - logDate.getTime()) / 86400000);
-                lastLearnedDate = `${diffDays}d ago`;
+        const learnPath = join(claudeDir, ".last-learn");
+        if (existsSync(learnPath)) {
+            const ts = parseInt(readFileSync(learnPath, "utf8").trim(), 10);
+            const diffMs = Date.now() - ts * 1000;
+            const diffMin = Math.floor(diffMs / 60000);
+            const diffHrs = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+            if (diffMin < 60) lastLearnedDate = `${diffMin}m`;
+            else if (diffHrs < 24) lastLearnedDate = `${diffHrs}h`;
+            else lastLearnedDate = `${diffDays}d`;
+        } else {
+            const log = readFileSync(join(claudeDir, "learning-log.md"), "utf8");
+            const match = log.match(/^## (\d{4})-(\d{2})-(\d{2})/m);
+            if (match) {
+                const logDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+                const diffDays = Math.floor((Date.now() - logDate.getTime()) / 86400000);
+                lastLearnedDate = diffDays === 0 ? "0d" : `${diffDays}d`;
             }
         }
     } catch { /* ignore */ }

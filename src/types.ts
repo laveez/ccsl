@@ -97,6 +97,7 @@ export interface InstinctStatus {
     activeCount: number;
     promotableCount: number;
     correctionsThisSession: number;
+    unprocessedObservations: number;
 }
 
 export interface LearningStatus {

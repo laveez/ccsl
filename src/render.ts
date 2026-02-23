@@ -225,12 +225,15 @@ function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
         badges.push(badge("steel", "🧩 ✗"));
     }
 
+    const obsCount = learningStatus.instinctStatus?.unprocessedObservations ?? 0;
+    const obsSuffix = obsCount > 0 ? ` ${obsCount}` : " ✓";
+
     if (learningStatus.learningPending) {
-        badges.push(badge("rose", "📚 ⚠"));
+        badges.push(badge("rose", `📚 ⚠${obsSuffix}`));
     } else if (learningStatus.lastLearnedDate) {
-        badges.push(badge("gold", `📚 ${learningStatus.lastLearnedDate}`));
+        badges.push(badge(obsCount > 0 ? "gold" : "green", `📚 ${learningStatus.lastLearnedDate}${obsSuffix}`));
     } else {
-        badges.push(badge("steel", "📚"));
+        badges.push(badge("steel", `📚${obsSuffix}`));
     }
 
     const inst = learningStatus.instinctStatus;

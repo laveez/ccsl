@@ -55,7 +55,7 @@ Every badge the statusline can show, with all possible states:
 | **Ticket marker** | Jira-style ticket ID extracted from PR title | `🎫 PROJ-123` |
 | **PR link** | Clickable PR with status: Draft, Open, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(✅)`, `(M)`, `(C)` |
 | **Recall status** | Whether `/recall` was run this session | `🧩 ✓` (recalled), `🧩 ✗` (not recalled) |
-| **Learn status** | Last `/learn` run date or warning if pending | `📚 today`, `📚 7d ago`, `📚 ⚠` (pending) |
+| **Learn status** | Compact relative time since last `/learn`, plus unprocessed observation count or ✓ | `📚 15m ✓` (recent, all processed), `📚 3d 1418` (3 days ago, 1418 pending), `📚 ⚠ 500` (pending) |
 | **Instinct status** | Active instinct count with promotion/correction indicators | `🧬 21` (normal), `🧬 21 ▲3` (3 promotable), `🧬 21 !` (corrections detected) |
 | **CCTG** | [cctg](https://github.com/laveez/cctg) Telegram gate status | `📱 ON`, `📱 off` |
 | **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |

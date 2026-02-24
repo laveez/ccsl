@@ -58,6 +58,7 @@ export function colorSegment(
 
 function isWideChar(code: number): boolean {
     return (
+        // CJK and fullwidth
         (code >= 0x1100 && code <= 0x115f) ||
         (code >= 0x2329 && code <= 0x232a) ||
         (code >= 0x2e80 && code <= 0xa4cf) ||
@@ -67,8 +68,21 @@ function isWideChar(code: number): boolean {
         (code >= 0xfe30 && code <= 0xfe6f) ||
         (code >= 0xff00 && code <= 0xff60) ||
         (code >= 0xffe0 && code <= 0xffe6) ||
+        // Emoji with default emoji presentation (width 2 in terminals)
+        (code >= 0x23e9 && code <= 0x23f3) ||   // ⏩-⏳ (includes ⏲)
+        (code >= 0x25aa && code <= 0x25ab) ||   // ▪▫
+        (code >= 0x25fb && code <= 0x25fe) ||   // ◻◼◽◾
+        (code >= 0x2614 && code <= 0x2615) ||   // ☔☕
+        (code >= 0x2648 && code <= 0x2653) ||   // ♈-♓
+        (code >= 0x26aa && code <= 0x26ab) ||   // ⚪⚫
+        (code === 0x26a1) ||                     // ⚡
+        (code === 0x2705) ||                     // ✅
+        (code === 0x2728) ||                     // ✨
         (code >= 0x1f300 && code <= 0x1f64f) ||
-        (code >= 0x1f900 && code <= 0x1f9ff)
+        (code >= 0x1f680 && code <= 0x1f6ff) || // Transport/map symbols
+        (code >= 0x1f900 && code <= 0x1f9ff) ||
+        (code >= 0x1fa00 && code <= 0x1fa6f) || // Chess, extended-A
+        (code >= 0x1fa70 && code <= 0x1faff)    // Symbols extended-A
     );
 }
 
@@ -78,7 +92,7 @@ export function getVisibleWidth(str: string): number {
     for (let i = 0; i < plain.length; i++) {
         const code = plain.codePointAt(i) || 0;
         if (code > 0xffff) i++;
-        width += isWideChar(code) ? 3 : 1;
+        width += isWideChar(code) ? 2 : 1;
     }
     return width;
 }

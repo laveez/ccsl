@@ -21,7 +21,7 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ### Contents
 
-- [Layouts](#layouts) · [Badge Reference](#badge-reference) · [Quick Start](#quick-start) · [Configuration](#configuration)
+- [Layouts](#layouts) · [Badge Reference](#badge-reference) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Width Modes](#width-modes)
 - [How It Works](#how-it-works) · [Privacy](#privacy) · [See Also](#see-also) · [Contributing](#contributing)
 
 ---
@@ -102,6 +102,9 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 ```json
 {
   "layout": "dense",
+  "flexMode": "full-until-compact",
+  "compactThreshold": 85,
+  "flexPadding": 6,
   "features": {
     "usage": false,
     "learning": false,
@@ -110,12 +113,34 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 }
 ```
 
+### Layout & Display
+
 | Option | Description | Default |
 |---|---|---|
 | `layout` | Layout mode (`dense`, `semantic`, `adaptive`) | `dense` |
+| `flexMode` | Terminal width strategy (see [Width Modes](#width-modes)) | `full-until-compact` |
+| `compactThreshold` | Context % that triggers compact width in `full-until-compact` mode (1–99) | `85` |
+| `flexPadding` | Chars subtracted from terminal width in `full` mode | `6` |
+
+### Feature Toggles
+
+| Option | Description | Default |
+|---|---|---|
 | `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
 | `features.learning` | Show recall/learn/instinct status badges (for custom learning loop integration) | `false` |
 | `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
+
+### Width Modes
+
+Claude Code shares the statusline row with system notifications (e.g., "Context left until auto-compact...") that appear on the right side and can truncate your output. The `flexMode` setting controls how ccsl adapts to the available width:
+
+| Mode | Behavior |
+|---|---|
+| `full` | Uses `terminalWidth - flexPadding`. Best for wide terminals without notifications. |
+| `full-minus-40` | Always reserves 40 chars for Claude Code notifications. Safe but less dense. |
+| `full-until-compact` | Uses full width normally, switches to `-40` when context usage exceeds `compactThreshold`. Best balance — only goes narrow when the auto-compact notification is likely to appear. |
+
+ccsl also replaces spaces with non-breaking spaces and prefixes each line with an ANSI reset code to prevent Claude Code from trimming or dimming the output.
 
 ---
 

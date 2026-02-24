@@ -782,6 +782,23 @@ export function getLearningStatus(sessionStart: Date | undefined): LearningStatu
 // ============================================================================
 
 export function getTerminalWidth(): number | null {
+    // Method 1: Query /dev/tty directly — most reliable after resize
+    try {
+        const width = execSync("stty size < /dev/tty 2>/dev/null | awk '{print $2}'", {
+            encoding: "utf8",
+            stdio: ["pipe", "pipe", "ignore"],
+            shell: "/bin/sh",
+        }).trim();
+
+        const parsed = parseInt(width, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            return parsed;
+        }
+    } catch {
+        // /dev/tty not available (e.g., no controlling terminal)
+    }
+
+    // Method 2: Find parent process TTY via ps
     try {
         const tty = execSync("ps -o tty= -p $(ps -o ppid= -p $$)", {
             encoding: "utf8",
@@ -805,9 +822,10 @@ export function getTerminalWidth(): number | null {
             }
         }
     } catch {
-        // Command failed, width detection not available
+        // Command failed
     }
 
+    // Method 3: tput cols fallback
     try {
         const width = execSync("tput cols 2>/dev/null", {
             encoding: "utf8",

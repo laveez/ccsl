@@ -120,6 +120,8 @@ export interface UnifiedStatuslineData {
 
 export type LayoutMode = "semantic" | "dense" | "adaptive";
 
+export type FlexMode = "full" | "full-minus-40" | "full-until-compact";
+
 export const BADGE = {
     blue:     [38, 60, 100] as const,
     green:    [38, 75, 48] as const,
@@ -137,6 +139,9 @@ export type BadgeColor = keyof typeof BADGE;
 
 export interface CcslConfig {
     layout: LayoutMode;
+    flexMode?: FlexMode;
+    compactThreshold?: number;
+    flexPadding?: number;
     features: {
         usage: boolean;
         learning: boolean;

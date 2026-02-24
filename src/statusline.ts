@@ -28,6 +28,10 @@ import {
     extractRepoName,
     extractRepoNameFromCommonDir,
     getProjectDir,
+    calculatePercentUsed,
+    calculateCurrentTokens,
+    getCurrentUsage,
+    getContextWindowSize,
 } from "./utils.js";
 import { buildStatuslineOutput, readStatuslineConfig } from "./render.js";
 
@@ -833,6 +837,24 @@ export async function readStdin(): Promise<string> {
     return Buffer.concat(chunks).toString("utf-8");
 }
 
+export function calculateMaxWidth(
+    termWidth: number,
+    config: CcslConfig,
+    contextPercent: number,
+): number {
+    const padding = config.flexPadding ?? 6;
+    switch (config.flexMode ?? "full-until-compact") {
+        case "full":
+            return termWidth - padding;
+        case "full-minus-40":
+            return termWidth - 40;
+        case "full-until-compact":
+            return contextPercent >= (config.compactThreshold ?? 60)
+                ? termWidth - 40
+                : termWidth - padding;
+    }
+}
+
 export async function main() {
     const inputStr = await readStdin();
     const input: StatuslineInput = JSON.parse(inputStr);
@@ -862,7 +884,11 @@ export async function main() {
 
     const maybeTerminalWidth = getTerminalWidth();
     const termWidth = maybeTerminalWidth || process.stdout.columns || parseInt(process.env.COLUMNS || "0") || 75;
-    const maxWidth = Math.min(termWidth - 4, 140);
+    const contextPercent = calculatePercentUsed(
+        calculateCurrentTokens(getCurrentUsage(input)),
+        getContextWindowSize(input),
+    );
+    const maxWidth = calculateMaxWidth(termWidth, config, contextPercent);
 
     const data: UnifiedStatuslineData = {
         input,

@@ -495,8 +495,15 @@ export function readStatuslineConfig(): CcslConfig {
             ? layout
             : "dense";
         const features = config.features ?? {};
+        const flexMode = config.flexMode;
+        const validFlexMode = (flexMode === "full" || flexMode === "full-minus-40" || flexMode === "full-until-compact")
+            ? flexMode
+            : undefined;
         return {
             layout: validLayout,
+            flexMode: validFlexMode,
+            compactThreshold: typeof config.compactThreshold === "number" ? config.compactThreshold : undefined,
+            flexPadding: typeof config.flexPadding === "number" ? config.flexPadding : undefined,
             features: {
                 usage: features.usage === true,
                 learning: features.learning === true,
@@ -532,7 +539,15 @@ export function buildStatuslineOutput(
     }
 
     const ERASE_TO_EOL = "\x1b[K";
-    let output = lines.map(line => line + reset() + ERASE_TO_EOL).join("\n");
+    const RESET_PREFIX = "\x1b[0m";
+    let output = lines
+        .map(line => {
+            let hardened = line + reset() + ERASE_TO_EOL;
+            hardened = hardened.replace(/ /g, "\u00A0");
+            hardened = RESET_PREFIX + hardened;
+            return hardened;
+        })
+        .join("\n");
     output = CLEAR_LINE_WITH_DEFAULT_BG + output + RESET_ALL + RESET_BG + RESET_FG;
     if (!output.includes("\n")) {
         output += "\n";

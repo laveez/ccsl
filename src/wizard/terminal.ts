@@ -39,18 +39,6 @@ export function clearScreen(): void {
     process.stdout.write("\x1b[2J\x1b[H");
 }
 
-export function moveCursor(row: number, col: number): void {
-    process.stdout.write(`\x1b[${row};${col}H`);
-}
-
-export function clearLines(n: number): void {
-    for (let i = 0; i < n; i++) {
-        process.stdout.write("\x1b[2K");
-        if (i < n - 1) process.stdout.write("\x1b[1A");
-    }
-    process.stdout.write("\r");
-}
-
 export function eraseDown(): void {
     process.stdout.write("\x1b[J");
 }
@@ -69,11 +57,9 @@ process.on("exit", cleanup);
 
 export function readKey(): Promise<KeyEvent> {
     return new Promise((resolve) => {
-        const handler = (data: string): void => {
-            process.stdin.removeListener("data", handler);
+        process.stdin.once("data", (data: string) => {
             resolve(parseKey(data));
-        };
-        process.stdin.on("data", handler);
+        });
     });
 }
 

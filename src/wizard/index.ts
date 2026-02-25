@@ -8,7 +8,7 @@ import { readStatuslineConfig } from "../render.js";
 import { enableRawMode, disableRawMode, showCursor, clearScreen } from "./terminal.js";
 import { selectPrompt, togglePrompt, numberPrompt, rowEditor } from "./prompts.js";
 import { renderPreview } from "./preview.js";
-import { header, separator, dim, sectionLabel } from "./ui.js";
+import { header, dim, sectionLabel } from "./ui.js";
 
 export async function runWizard(): Promise<void> {
     if (!process.stdin.isTTY) {
@@ -47,7 +47,7 @@ export async function runWizard(): Promise<void> {
         }
 
         // 3. Row editor
-        rows = await rowEditor(rows) as RowConfig;
+        rows = await rowEditor(rows);
         console.log();
 
         // 4. Flex settings
@@ -82,9 +82,9 @@ export async function runWizard(): Promise<void> {
 
         // 5. Feature toggles
         const features = await togglePrompt("Optional features", [
-            { key: "usage", label: "API usage rate limit bar", enabled: existing.features.usage },
-            { key: "learning", label: "Learning loop status", enabled: existing.features.learning },
-            { key: "remoteControl", label: "Remote control status", enabled: existing.features.remoteControl },
+            { key: "usage", label: "API usage rate limit bar", enabled: existing.features?.usage ?? false },
+            { key: "learning", label: "Learning loop status", enabled: existing.features?.learning ?? false },
+            { key: "remoteControl", label: "Remote control status", enabled: existing.features?.remoteControl ?? false },
         ]);
         console.log();
 

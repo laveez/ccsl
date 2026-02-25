@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -208,11 +209,18 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
     return badges;
 }
 
-function buildCctgBadge(): string[] {
-    const cctgConfig = join(homedir(), ".cctg.json");
-    if (!existsSync(cctgConfig)) return [];
-    const active = existsSync(join(homedir(), ".cctg-active"));
-    return [badge(active ? "orange" : "steel", `📱 ${active ? "ON" : "off"}`)];
+function isRemoteControlActive(): boolean {
+    try {
+        execFileSync("pgrep", ["-f", "claude.*remote-control"], { stdio: "ignore" });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function buildRemoteControlBadge(): string[] {
+    const active = isRemoteControlActive();
+    return [badge(active ? "cyan" : "steel", `📱 ${active ? "RC" : "local"}`)];
 }
 
 function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
@@ -344,11 +352,11 @@ function buildDenseLayout(data: UnifiedStatuslineData, maxWidth: number, config:
     const duration = getDuration(input);
     const lines: string[] = [];
 
-    // Row 1: identity + learning + cctg
+    // Row 1: identity + learning + RC
     const row1: string[] = [
         ...buildIdentityBadges(input, usageData, duration),
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.cctg ? buildCctgBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
     ];
     lines.push(joinSegmentsWithWrap(row1, maxWidth));
 
@@ -416,10 +424,10 @@ function buildSemanticLayout(data: UnifiedStatuslineData, maxWidth: number, conf
     const configPrBadges = [...buildConfigBadges(configCounts), ...buildPrBadges(prInfo)];
     if (configPrBadges.length > 0) lines.push(joinSegmentsWithWrap(configPrBadges, maxWidth));
 
-    // L5: Learning loop + cctg
+    // L5: Learning loop + RC
     const learnBadges = [
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.cctg ? buildCctgBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
     ];
     if (learnBadges.length > 0) lines.push(joinSegmentsWithWrap(learnBadges, maxWidth));
 
@@ -461,7 +469,7 @@ function buildAdaptiveLayout(data: UnifiedStatuslineData, maxWidth: number, conf
         ...buildConfigBadges(configCounts),
         ...buildPrBadges(prInfo),
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.cctg ? buildCctgBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
         buildTranscriptBadge(input.transcript_path),
     ];
 
@@ -486,7 +494,7 @@ export function readStatuslineConfig(): CcslConfig {
     try {
         const configPath = join(homedir(), ".claude", "statusline-config.json");
         if (!existsSync(configPath)) {
-            return { layout: "dense", features: { usage: false, learning: false, cctg: false } };
+            return { layout: "dense", features: { usage: false, learning: false, remoteControl: false } };
         }
         const content = readFileSync(configPath, "utf8");
         const config = JSON.parse(content);
@@ -507,11 +515,11 @@ export function readStatuslineConfig(): CcslConfig {
             features: {
                 usage: features.usage === true,
                 learning: features.learning === true,
-                cctg: features.cctg === true,
+                remoteControl: features.remoteControl === true,
             },
         };
     } catch { /* ignore */ }
-    return { layout: "dense", features: { usage: false, learning: false, cctg: false } };
+    return { layout: "dense", features: { usage: false, learning: false, remoteControl: false } };
 }
 
 export function buildStatuslineOutput(

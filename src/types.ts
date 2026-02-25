@@ -145,6 +145,6 @@ export interface CcslConfig {
     features: {
         usage: boolean;
         learning: boolean;
-        cctg: boolean;
+        remoteControl: boolean;
     };
 }

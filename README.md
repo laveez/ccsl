@@ -57,7 +57,7 @@ Every badge the statusline can show, with all possible states:
 | **Recall status** | Whether `/recall` was run this session | `🧩 ✓` (recalled), `🧩 ✗` (not recalled) |
 | **Learn status** | Compact relative time since last `/learn`, plus unprocessed observation count or ✓ | `📚 15m ✓` (recent, all processed), `📚 3d 1418` (3 days ago, 1418 pending), `📚 ⚠ 500` (pending) |
 | **Instinct status** | Active instinct count with promotion/correction indicators | `🧬 21` (normal), `🧬 21 ▲3` (3 promotable), `🧬 21 !` (corrections detected) |
-| **CCTG** | [cctg](https://github.com/laveez/cctg) Telegram gate status | `📱 ON`, `📱 off` |
+| **Remote Control** | Claude Code [Remote Control](https://code.claude.com/docs/en/remote-control) status | `📱 RC`, `📱 local` |
 | **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
 | **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
@@ -108,7 +108,7 @@ Create `~/.claude/statusline-config.json` to customize behavior:
   "features": {
     "usage": false,
     "learning": false,
-    "cctg": false
+    "remoteControl": false
   }
 }
 ```
@@ -128,7 +128,7 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 |---|---|---|
 | `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
 | `features.learning` | Show recall/learn/instinct status badges (for custom learning loop integration) | `false` |
-| `features.cctg` | Show [cctg](https://github.com/laveez/cctg) (Claude Code Telegram Gate) status badge | `false` |
+| `features.remoteControl` | Show Claude Code [Remote Control](https://code.claude.com/docs/en/remote-control) status badge | `false` |
 
 ### Width Modes
 
@@ -182,7 +182,7 @@ When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~
 
 ## See Also
 
-- **[cctg](https://github.com/laveez/cctg)** — Claude Code Telegram Gate. Approve tool calls, answer questions, and send follow-up instructions from your phone. When installed, ccsl shows the cctg mode as a statusline badge (enable with `features.cctg: true`).
+- **[Remote Control](https://code.claude.com/docs/en/remote-control)** — Claude Code's built-in feature for continuing local sessions from your phone, tablet, or browser. When enabled, ccsl shows the RC status as a badge (enable with `features.remoteControl: true`).
 
 ## Acknowledgments
 

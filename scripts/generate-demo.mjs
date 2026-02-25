@@ -8,7 +8,7 @@
  *
  * Requirements: playwright (npx/global), ffmpeg, git
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve as pathResolve } from "node:path";
@@ -29,7 +29,10 @@ let configBackup;
 try { configBackup = readFileSync(CONFIG_PATH, "utf8"); } catch { configBackup = null; }
 let httpServer = null;
 
+let rcDummyPid = null;
+
 function cleanup() {
+    if (rcDummyPid) try { process.kill(-rcDummyPid); } catch {}
     if (configBackup !== null) writeFileSync(CONFIG_PATH, configBackup);
     try { rmSync(TMP, { recursive: true, force: true }); } catch {}
     if (httpServer) { httpServer.close(); httpServer = null; }
@@ -126,10 +129,17 @@ const INPUT = JSON.stringify({
 
 const VARIANTS = ["dense", "dense-full", "semantic", "semantic-full", "adaptive", "adaptive-full"];
 
+// Spawn a dummy process matching "claude.*remote-control" for pgrep detection during -full renders
+const rcScript = join(TMP, "claude");
+writeFileSync(rcScript, "#!/bin/sh\nsleep 120", { mode: 0o755 });
+const rcDummy = spawn(rcScript, ["remote-control"], { stdio: "ignore", detached: true });
+rcDummyPid = rcDummy.pid;
+rcDummy.unref();
+
 for (const variant of VARIANTS) {
     const layout = variant.replace("-full", "");
     const features = variant.endsWith("-full");
-    const config = { layout, features: { usage: features, learning: features, cctg: features } };
+    const config = { layout, features: { usage: features, learning: features, remoteControl: features } };
     writeFileSync(CONFIG_PATH, JSON.stringify(config));
 
     const ansi = run("node", [CCSL_BIN], {

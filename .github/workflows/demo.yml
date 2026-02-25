@@ -41,8 +41,6 @@ jobs:
           git config --global user.email "demo@example.com"
           mkdir -p ~/.claude
           echo '{}' > ~/.claude/statusline-config.json
-          echo '{"botToken":"demo","chatId":0}' > ~/.cctg.json
-          touch ~/.cctg-active
           date +%s > ~/.claude/.last-recall
           echo '{"auto":true}' > ~/.claude/learning-mode.json
           python3 -c "import json; print(json.dumps([{'id':f'inst-{i}','confidence':0.9 if i<18 else 0.85,'seen_count':10 if i<18 else 4,'evolved_to':'claude-md' if i<18 else None} for i in range(21)]))" > ~/.claude/instincts.json

@@ -172,11 +172,11 @@ badges.push(row("Instinct status",
     badge("🧬 21 !", C.rose),
 ));
 
-// ── CCTG (optional) ──
-badges.push(section("CCTG &nbsp;<span class=\"feature-tag\">features.cctg</span>"));
-badges.push(row("Telegram gate",
-    badge("📱 ON", C.orange),
-    badge("📱 off", C.steel),
+// ── Remote Control (optional) ──
+badges.push(section("Remote Control &nbsp;<span class=\"feature-tag\">features.remoteControl</span>"));
+badges.push(row("RC status",
+    badge("📱 RC", C.cyan),
+    badge("📱 local", C.steel),
 ));
 
 // ── Transcript & Tools ──

@@ -14,9 +14,11 @@ import type {
     LearningStatus,
     UnifiedStatuslineData,
     BadgeColor,
+    BadgeGroup,
+    RowConfig,
     CcslConfig,
 } from "./types.js";
-import { BADGE } from "./types.js";
+import { BADGE, BADGE_GROUPS, DEFAULT_ROWS, PRESET_DENSE, PRESET_SEMANTIC, PRESET_ADAPTIVE } from "./types.js";
 import {
     bgRgb,
     fgWhite,
@@ -333,160 +335,85 @@ function buildTodoBadges(todos: TodoItem[]): string[] {
 }
 
 // ============================================================================
-// Layouts
+// Row-based Layout Engine
 // ============================================================================
 
-function buildDenseLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
-    const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
-    const duration = getDuration(input);
+type BadgeGroupBuilder = (data: UnifiedStatuslineData, config: CcslConfig) => string[];
+
+const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
+    identity: (data) => buildIdentityBadges(data.input, data.usageData, getDuration(data.input)),
+    context: (data) => buildContextBadges(data.input),
+    usage: (data, config) => config.features.usage ? buildUsageBadges(data.usageData) : [],
+    git: (data) => buildGitBadges(data.gitInfo, data.input),
+    config: (data) => buildConfigBadges(data.configCounts),
+    pr: (data) => buildPrBadges(data.prInfo),
+    learning: (data, config) => config.features.learning ? buildLearningBadges(data.learningStatus) : [],
+    remoteControl: (data, config) => config.features.remoteControl ? buildRemoteControlBadge(data.transcriptData?.remoteControlActive === true) : [],
+    transcript: (data) => [buildTranscriptBadge(data.input.transcript_path)],
+    tools: (data) => data.transcriptData?.tools ? buildToolBadges(data.transcriptData.tools, data.input.workspace.current_dir) : [],
+    agents: (data) => data.transcriptData?.agents?.length ? buildAgentBadges(data.transcriptData.agents, data.input.workspace.current_dir) : [],
+    todos: (data) => data.transcriptData?.todos?.length ? buildTodoBadges(data.transcriptData.todos) : [],
+};
+
+function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
+    const rows = config.rows ?? DEFAULT_ROWS;
     const lines: string[] = [];
-    const rcActive = transcriptData?.remoteControlActive === true;
+    for (const row of rows) {
+        if (row === "---") {
+            const ruleWidth = Math.min(maxWidth || 60, 60);
+            lines.push(`\x1b[38;2;60;60;60m${"─".repeat(ruleWidth)}${reset()}`);
+            continue;
+        }
 
-    // Row 1: identity + learning + RC
-    const row1: string[] = [
-        ...buildIdentityBadges(input, usageData, duration),
-        ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
-    ];
-    lines.push(joinSegmentsWithWrap(row1, maxWidth));
-
-    // Row 2: context + usage + config
-    const row2: string[] = [
-        ...buildContextBadges(input),
-        ...(config.features.usage ? buildUsageBadges(usageData) : []),
-        ...buildConfigBadges(configCounts),
-    ];
-    lines.push(joinSegmentsWithWrap(row2, maxWidth));
-
-    // Row 3: git + PR
-    const row3git: string[] = [
-        ...buildGitBadges(gitInfo, input),
-        ...buildPrBadges(prInfo),
-    ];
-    if (row3git.length > 0) lines.push(joinSegmentsWithWrap(row3git, maxWidth));
-
-    // Separator between header and detail rows
-    const ruleWidth = Math.min(maxWidth || 60, 60);
-    lines.push(`\x1b[38;2;60;60;60m${"─".repeat(ruleWidth)}${reset()}`);
-
-    // Row 4: transcript + tools
-    const row4: string[] = [buildTranscriptBadge(input.transcript_path)];
-    if (transcriptData?.tools) {
-        row4.push(...buildToolBadges(transcriptData.tools, input.workspace.current_dir));
-    }
-    lines.push(joinSegmentsWithWrap(row4, maxWidth));
-
-    // Row 5: agents
-    if (transcriptData?.agents && transcriptData.agents.length > 0) {
-        const agentBadges = buildAgentBadges(transcriptData.agents, input.workspace.current_dir);
-        if (agentBadges.length > 0) lines.push(joinSegmentsWithWrap(agentBadges, maxWidth));
-    }
-
-    // Row 6: todos
-    if (transcriptData?.todos && transcriptData.todos.length > 0) {
-        const todoBadges = buildTodoBadges(transcriptData.todos);
-        if (todoBadges.length > 0) lines.push(joinSegmentsWithWrap(todoBadges, maxWidth));
+        const badges: string[] = [];
+        for (const group of row) {
+            const builder = badgeGroupBuilders[group];
+            if (builder) badges.push(...builder(data, config));
+        }
+        if (badges.length > 0) {
+            lines.push(joinSegmentsWithWrap(badges, maxWidth));
+        }
     }
 
     return lines;
-}
-
-function buildSemanticLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
-    const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
-    const duration = getDuration(input);
-    const lines: string[] = [];
-    const rcActive = transcriptData?.remoteControlActive === true;
-
-    // L1: Identity
-    lines.push(joinSegmentsWithWrap(buildIdentityBadges(input, usageData, duration), maxWidth));
-
-    // L2: Context + usage
-    const contextRow = [
-        ...buildContextBadges(input),
-        ...(config.features.usage ? buildUsageBadges(usageData) : []),
-    ];
-    lines.push(joinSegmentsWithWrap(contextRow, maxWidth));
-
-    // L3: Git
-    const gitBadges = buildGitBadges(gitInfo, input);
-    if (gitBadges.length > 0) lines.push(joinSegmentsWithWrap(gitBadges, maxWidth));
-
-    // L4: Config + PR
-    const configPrBadges = [...buildConfigBadges(configCounts), ...buildPrBadges(prInfo)];
-    if (configPrBadges.length > 0) lines.push(joinSegmentsWithWrap(configPrBadges, maxWidth));
-
-    // L5: Learning loop + RC
-    const learnBadges = [
-        ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
-    ];
-    if (learnBadges.length > 0) lines.push(joinSegmentsWithWrap(learnBadges, maxWidth));
-
-    // Separator between header and detail rows
-    const semRuleWidth = Math.min(maxWidth || 60, 60);
-    lines.push(`\x1b[38;2;60;60;60m${"─".repeat(semRuleWidth)}${reset()}`);
-
-    // L6: Transcript + tools
-    const transcriptToolRow: string[] = [buildTranscriptBadge(input.transcript_path)];
-    if (transcriptData?.tools) {
-        transcriptToolRow.push(...buildToolBadges(transcriptData.tools, input.workspace.current_dir));
-    }
-    lines.push(joinSegmentsWithWrap(transcriptToolRow, maxWidth));
-
-    // L7: Agents
-    if (transcriptData?.agents && transcriptData.agents.length > 0) {
-        const agentBadges = buildAgentBadges(transcriptData.agents, input.workspace.current_dir);
-        if (agentBadges.length > 0) lines.push(joinSegmentsWithWrap(agentBadges, maxWidth));
-    }
-
-    // L9: Todos
-    if (transcriptData?.todos && transcriptData.todos.length > 0) {
-        const todoBadges = buildTodoBadges(transcriptData.todos);
-        if (todoBadges.length > 0) lines.push(joinSegmentsWithWrap(todoBadges, maxWidth));
-    }
-
-    return lines;
-}
-
-function buildAdaptiveLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
-    const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
-    const duration = getDuration(input);
-    const rcActive = transcriptData?.remoteControlActive === true;
-
-    const allBadges: string[] = [
-        ...buildIdentityBadges(input, usageData, duration),
-        ...buildContextBadges(input),
-        ...(config.features.usage ? buildUsageBadges(usageData) : []),
-        ...buildGitBadges(gitInfo, input),
-        ...buildConfigBadges(configCounts),
-        ...buildPrBadges(prInfo),
-        ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
-        buildTranscriptBadge(input.transcript_path),
-    ];
-
-    if (transcriptData?.tools) {
-        allBadges.push(...buildToolBadges(transcriptData.tools, input.workspace.current_dir));
-    }
-    if (transcriptData?.agents && transcriptData.agents.length > 0) {
-        allBadges.push(...buildAgentBadges(transcriptData.agents, input.workspace.current_dir));
-    }
-    if (transcriptData?.todos && transcriptData.todos.length > 0) {
-        allBadges.push(...buildTodoBadges(transcriptData.todos));
-    }
-
-    return [joinSegmentsWithWrap(allBadges, maxWidth)];
 }
 
 // ============================================================================
 // Config & Output
 // ============================================================================
 
+const VALID_BADGE_GROUPS = new Set<string>(BADGE_GROUPS);
+
+function parseRows(rawRows: unknown): RowConfig | undefined {
+    if (!Array.isArray(rawRows)) return undefined;
+    const result: RowConfig = [];
+    for (const item of rawRows) {
+        if (item === "---") {
+            result.push("---");
+        } else if (Array.isArray(item)) {
+            const groups = item.filter(
+                (g: unknown): g is BadgeGroup => typeof g === "string" && VALID_BADGE_GROUPS.has(g),
+            );
+            if (groups.length > 0) result.push(groups);
+        }
+    }
+    return result.length > 0 ? result : undefined;
+}
+
+function layoutToRows(layout: string): RowConfig {
+    switch (layout) {
+        case "semantic": return PRESET_SEMANTIC;
+        case "adaptive": return PRESET_ADAPTIVE;
+        case "dense":
+        default: return PRESET_DENSE;
+    }
+}
+
 export function readStatuslineConfig(): CcslConfig {
     try {
         const configPath = join(homedir(), ".claude", "statusline-config.json");
         if (!existsSync(configPath)) {
-            return { layout: "dense", features: { usage: false, learning: false, remoteControl: false } };
+            return { rows: DEFAULT_ROWS, features: { usage: false, learning: false, remoteControl: false } };
         }
         const content = readFileSync(configPath, "utf8");
         const config = JSON.parse(content);
@@ -499,8 +426,10 @@ export function readStatuslineConfig(): CcslConfig {
         const validFlexMode = (flexMode === "full" || flexMode === "full-minus-40" || flexMode === "full-until-compact")
             ? flexMode
             : undefined;
+        const rows = parseRows(config.rows) ?? layoutToRows(validLayout);
         return {
             layout: validLayout,
+            rows,
             flexMode: validFlexMode,
             compactThreshold: typeof config.compactThreshold === "number" ? config.compactThreshold : undefined,
             flexPadding: typeof config.flexPadding === "number" ? config.flexPadding : undefined,
@@ -511,7 +440,7 @@ export function readStatuslineConfig(): CcslConfig {
             },
         };
     } catch { /* ignore */ }
-    return { layout: "dense", features: { usage: false, learning: false, remoteControl: false } };
+    return { rows: DEFAULT_ROWS, features: { usage: false, learning: false, remoteControl: false } };
 }
 
 export function buildStatuslineOutput(
@@ -520,19 +449,7 @@ export function buildStatuslineOutput(
     termWidth: number = 0,
     config: CcslConfig = readStatuslineConfig(),
 ): string {
-    let lines: string[];
-    switch (config.layout) {
-        case "semantic":
-            lines = buildSemanticLayout(data, maxWidth, config);
-            break;
-        case "adaptive":
-            lines = buildAdaptiveLayout(data, maxWidth, config);
-            break;
-        case "dense":
-        default:
-            lines = buildDenseLayout(data, maxWidth, config);
-            break;
-    }
+    let lines = buildRowLayout(data, maxWidth, config);
 
     if (termWidth > 0 && termWidth < 80) {
         lines = lines.map(line => stripEmojis(line));

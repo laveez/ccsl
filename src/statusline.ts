@@ -866,7 +866,7 @@ export function calculateMaxWidth(
     config: CcslConfig,
     contextPercent: number,
 ): number {
-    const padding = config.flexPadding ?? 6;
+    const padding = config.flexPadding ?? 50;
     switch (config.flexMode ?? "full-until-compact") {
         case "full":
             return termWidth - padding;
@@ -874,7 +874,7 @@ export function calculateMaxWidth(
             return termWidth - 40;
         case "full-until-compact":
             return contextPercent >= (config.compactThreshold ?? 60)
-                ? termWidth - 40
+                ? termWidth - Math.max(padding, 40)
                 : termWidth - padding;
     }
 }

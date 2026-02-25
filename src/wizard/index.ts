@@ -63,7 +63,7 @@ export async function runWizard(): Promise<void> {
         console.log();
 
         let compactThreshold = existing.compactThreshold ?? 85;
-        let flexPadding = existing.flexPadding ?? 6;
+        let flexPadding = existing.flexPadding ?? 50;
 
         if (flexMode === "full-until-compact") {
             compactThreshold = await numberPrompt(

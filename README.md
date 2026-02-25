@@ -167,7 +167,7 @@ Three preset starting points (available via `ccsl setup`):
 | `rows` | Row composition array (see above) | Dense preset |
 | `flexMode` | Terminal width strategy (see [Width Modes](#width-modes)) | `full-until-compact` |
 | `compactThreshold` | Context % that triggers compact width in `full-until-compact` mode (1–99) | `85` |
-| `flexPadding` | Chars subtracted from terminal width in `full` mode | `6` |
+| `flexPadding` | Chars reserved for right-side notifications (all modes) | `50` |
 
 > **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets.
 
@@ -181,13 +181,13 @@ Three preset starting points (available via `ccsl setup`):
 
 ### Width Modes
 
-Claude Code shares the statusline row with system notifications (e.g., "Context left until auto-compact...") that appear on the right side and can truncate your output. The `flexMode` setting controls how ccsl adapts to the available width:
+Claude Code shares the statusline row with system notifications (e.g., "Update available!", "Context left until auto-compact...") that appear on the right side and can truncate your output. The `flexMode` setting controls how ccsl adapts, while `flexPadding` (default: 50) reserves space for these notifications:
 
 | Mode | Behavior |
 |---|---|
-| `full` | Uses `terminalWidth - flexPadding`. Best for wide terminals without notifications. |
-| `full-minus-40` | Always reserves 40 chars for Claude Code notifications. Safe but less dense. |
-| `full-until-compact` | Uses full width normally, switches to `-40` when context usage exceeds `compactThreshold`. Best balance — only goes narrow when the auto-compact notification is likely to appear. |
+| `full` | Uses `terminalWidth - flexPadding`. Good default for most setups. |
+| `full-minus-40` | Always reserves exactly 40 chars. Legacy mode for narrower notification reserve. |
+| `full-until-compact` | Uses `flexPadding` normally, increases reserve to `max(flexPadding, 40)` when context exceeds `compactThreshold`. |
 
 ccsl also replaces spaces with non-breaking spaces and prefixes each line with an ANSI reset code to prevent Claude Code from trimming or dimming the output.
 

@@ -1,6 +1,7 @@
 import type { BadgeGroup } from "../types.js";
+import { BADGE_GROUPS } from "../types.js";
 import { readKey, hideCursor, showCursor, eraseDown } from "./terminal.js";
-import { cursor, dim, highlight, keyHint, sectionLabel, selectedRow, separator } from "./ui.js";
+import { cursor, dim, highlight, keyHint, sectionLabel, selectedRow as selectedRowStyle, separator } from "./ui.js";
 
 export interface SelectOption<T> {
     label: string;
@@ -187,7 +188,7 @@ export async function rowEditor(rows: RowEntry[]): Promise<RowEntry[]> {
 
             if (row === "---") {
                 const sep = dim("──── separator ────");
-                console.log(`${prefix}${isSel ? selectedRow_ui(sep) : sep}`);
+                console.log(`${prefix}${isSel ? selectedRowStyle(sep) : sep}`);
                 continue;
             }
 
@@ -201,7 +202,7 @@ export async function rowEditor(rows: RowEntry[]): Promise<RowEntry[]> {
                 console.log(`${prefix}${parts.join("  ")}`);
             } else {
                 const badgeList = row.map(g => g).join(", ");
-                console.log(`${prefix}${isSel ? selectedRow_ui(badgeList) : `  ${badgeList}`}`);
+                console.log(`${prefix}${isSel ? selectedRowStyle(badgeList) : `  ${badgeList}`}`);
             }
         }
 
@@ -229,19 +230,6 @@ export async function rowEditor(rows: RowEntry[]): Promise<RowEntry[]> {
             );
         }
     };
-
-    function selectedRow_ui(text: string): string {
-        return selectedRow_fn(text);
-    }
-
-    function selectedRow_fn(text: string): string {
-        return selectedRow_style(text);
-    }
-
-    function selectedRow_style(text: string): string {
-        const bg = "\x1b[48;2;50;55;65m\x1b[37m";
-        return `${bg} ${text} \x1b[0m`;
-    }
 
     renderRows();
 
@@ -314,9 +302,11 @@ export async function rowEditor(rows: RowEntry[]): Promise<RowEntry[]> {
                 }
                 mode = "navigate";
             } else if (key.name === "up") {
-                editCursor = (editCursor - 1 + row.length) % (row.length || 1);
+                if (row.length === 0) continue;
+                editCursor = (editCursor - 1 + row.length) % row.length;
             } else if (key.name === "down") {
-                editCursor = (editCursor + 1) % (row.length || 1);
+                if (row.length === 0) continue;
+                editCursor = (editCursor + 1) % row.length;
             } else if (key.name === "space") {
                 // Toggle: show all badge groups, add/remove from this row
                 await toggleBadgesInRow(row);
@@ -336,12 +326,8 @@ export async function rowEditor(rows: RowEntry[]): Promise<RowEntry[]> {
 }
 
 async function toggleBadgesInRow(row: BadgeGroup[]): Promise<void> {
-    const allGroups: BadgeGroup[] = [
-        "identity", "context", "usage", "git", "config", "pr",
-        "learning", "remoteControl", "transcript", "tools", "agents", "todos",
-    ];
     const inRow = new Set(row);
-    const options = allGroups.map(g => ({
+    const options = BADGE_GROUPS.map(g => ({
         key: g,
         label: `${g} — ${BADGE_DESCRIPTIONS[g]}`,
         enabled: inRow.has(g),
@@ -350,7 +336,7 @@ async function toggleBadgesInRow(row: BadgeGroup[]): Promise<void> {
 
     // Rebuild row: keep existing order for enabled, append newly enabled
     const kept = row.filter(g => result[g]);
-    const added = allGroups.filter(g => result[g] && !inRow.has(g));
+    const added = BADGE_GROUPS.filter(g => result[g] && !inRow.has(g));
     row.length = 0;
     row.push(...kept, ...added);
 }

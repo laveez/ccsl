@@ -1,7 +1,7 @@
 import type { BadgeGroup } from "../types.js";
 import { BADGE_GROUPS } from "../types.js";
 import { readKey, hideCursor, showCursor, eraseDown } from "./terminal.js";
-import { cursor, dim, highlight, keyHint, sectionLabel, selectedRow as selectedRowStyle, separator } from "./ui.js";
+import { cursor, dim, highlight, keyHint, sectionLabel, selectedRow as selectedRowStyle } from "./ui.js";
 
 export interface SelectOption<T> {
     label: string;

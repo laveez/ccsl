@@ -467,6 +467,31 @@ function getKeychainBackoffPath(): string {
     return join(homedir(), ".claude", "plugins", "ccsl", ".keychain-backoff");
 }
 
+function getRcCachePath(): string {
+    return join(homedir(), ".claude", "plugins", "ccsl", ".rc-active");
+}
+
+function readRcCache(): string | null {
+    try {
+        const p = getRcCachePath();
+        if (!existsSync(p)) return null;
+        return readFileSync(p, "utf8").trim();
+    } catch {
+        return null;
+    }
+}
+
+function writeRcCache(transcriptPath: string): void {
+    try {
+        const p = getRcCachePath();
+        const dir = dirname(p);
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        writeFileSync(p, transcriptPath, "utf8");
+    } catch {
+        // Ignore write failures
+    }
+}
+
 function readUsageCache(now: number): UsageData | null {
     try {
         const cachePath = getUsageCachePath();
@@ -899,6 +924,15 @@ export async function main() {
     ];
 
     const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);
+
+    // Persist RC detection across context compaction
+    if (transcriptData && config.features.remoteControl) {
+        if (transcriptData.remoteControlActive) {
+            writeRcCache(input.transcript_path);
+        } else if (readRcCache() === input.transcript_path) {
+            transcriptData.remoteControlActive = true;
+        }
+    }
 
     const prInfo = gitInfo ? await fetchPrInfo() : null;
 

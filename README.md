@@ -124,7 +124,7 @@ Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array 
   ],
   "flexMode": "full-until-compact",
   "compactThreshold": 85,
-  "flexPadding": 6,
+  "flexPadding": 50,
   "features": {
     "usage": false,
     "learning": false,

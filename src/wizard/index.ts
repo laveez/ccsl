@@ -76,7 +76,7 @@ export async function runWizard(): Promise<void> {
         flexPadding = await numberPrompt(
             "Flex padding (cols)",
             flexPadding,
-            { min: 0, max: 20 },
+            { min: 0, max: 200 },
         );
         console.log();
 
@@ -92,7 +92,7 @@ export async function runWizard(): Promise<void> {
         const config: CcslConfig = {
             rows,
             flexMode,
-            compactThreshold,
+            ...(flexMode === "full-until-compact" ? { compactThreshold } : {}),
             flexPadding,
             features: {
                 usage: features.usage ?? false,
@@ -116,11 +116,15 @@ export async function runWizard(): Promise<void> {
         );
 
         if (action === "save") {
-            const configDir = join(homedir(), ".claude");
-            mkdirSync(configDir, { recursive: true });
-            const configPath = join(configDir, "statusline-config.json");
-            writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-            console.log(`\n${sectionLabel("Saved")} ${dim(configPath)}`);
+            try {
+                const configDir = join(homedir(), ".claude");
+                mkdirSync(configDir, { recursive: true });
+                const configPath = join(configDir, "statusline-config.json");
+                writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+                console.log(`\n${sectionLabel("Saved")} ${dim(configPath)}`);
+            } catch (err) {
+                console.error(`\n${sectionLabel("Error")} Failed to save: ${dim(err instanceof Error ? err.message : String(err))}`);
+            }
         } else {
             console.log(`\n${dim("Discarded — no changes made.")}`);
         }

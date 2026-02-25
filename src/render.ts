@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -209,17 +208,7 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
     return badges;
 }
 
-function isRemoteControlActive(): boolean {
-    try {
-        execFileSync("pgrep", ["-f", "claude.*remote-control"], { stdio: "ignore" });
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function buildRemoteControlBadge(): string[] {
-    const active = isRemoteControlActive();
+function buildRemoteControlBadge(active: boolean): string[] {
     return [badge(active ? "cyan" : "steel", `📱 ${active ? "RC" : "local"}`)];
 }
 
@@ -351,12 +340,13 @@ function buildDenseLayout(data: UnifiedStatuslineData, maxWidth: number, config:
     const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
     const duration = getDuration(input);
     const lines: string[] = [];
+    const rcActive = transcriptData?.remoteControlActive === true;
 
     // Row 1: identity + learning + RC
     const row1: string[] = [
         ...buildIdentityBadges(input, usageData, duration),
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
     ];
     lines.push(joinSegmentsWithWrap(row1, maxWidth));
 
@@ -405,6 +395,7 @@ function buildSemanticLayout(data: UnifiedStatuslineData, maxWidth: number, conf
     const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
     const duration = getDuration(input);
     const lines: string[] = [];
+    const rcActive = transcriptData?.remoteControlActive === true;
 
     // L1: Identity
     lines.push(joinSegmentsWithWrap(buildIdentityBadges(input, usageData, duration), maxWidth));
@@ -427,7 +418,7 @@ function buildSemanticLayout(data: UnifiedStatuslineData, maxWidth: number, conf
     // L5: Learning loop + RC
     const learnBadges = [
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
     ];
     if (learnBadges.length > 0) lines.push(joinSegmentsWithWrap(learnBadges, maxWidth));
 
@@ -460,6 +451,7 @@ function buildSemanticLayout(data: UnifiedStatuslineData, maxWidth: number, conf
 function buildAdaptiveLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
     const { input, gitInfo, prInfo, transcriptData, configCounts, usageData, learningStatus } = data;
     const duration = getDuration(input);
+    const rcActive = transcriptData?.remoteControlActive === true;
 
     const allBadges: string[] = [
         ...buildIdentityBadges(input, usageData, duration),
@@ -469,7 +461,7 @@ function buildAdaptiveLayout(data: UnifiedStatuslineData, maxWidth: number, conf
         ...buildConfigBadges(configCounts),
         ...buildPrBadges(prInfo),
         ...(config.features.learning ? buildLearningBadges(learningStatus) : []),
-        ...(config.features.remoteControl ? buildRemoteControlBadge() : []),
+        ...(config.features.remoteControl ? buildRemoteControlBadge(rcActive) : []),
         buildTranscriptBadge(input.transcript_path),
     ];
 

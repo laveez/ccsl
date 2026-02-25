@@ -182,6 +182,8 @@ export async function fetchPrInfo(): Promise<PrInfo | null> {
 
 interface TranscriptLine {
     timestamp?: string;
+    type?: string;
+    subtype?: string;
     message?: {
         content?: ContentBlock[];
     };
@@ -246,6 +248,10 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
 
                 if (!result.sessionStart && entry.timestamp) {
                     result.sessionStart = timestamp;
+                }
+
+                if (entry.type === "system" && entry.subtype === "bridge_status") {
+                    result.remoteControlActive = true;
                 }
 
                 const content = entry.message?.content;

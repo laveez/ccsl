@@ -64,6 +64,7 @@ export interface TranscriptData {
     agents: AgentEntry[];
     todos: TodoItem[];
     sessionStart?: Date;
+    remoteControlActive?: boolean;
 }
 
 export interface GitFileStats {

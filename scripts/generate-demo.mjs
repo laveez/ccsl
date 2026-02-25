@@ -8,7 +8,7 @@
  *
  * Requirements: playwright (npx/global), ffmpeg, git
  */
-import { execFileSync, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 import { join, dirname, resolve as pathResolve } from "node:path";
@@ -29,10 +29,7 @@ let configBackup;
 try { configBackup = readFileSync(CONFIG_PATH, "utf8"); } catch { configBackup = null; }
 let httpServer = null;
 
-let rcDummyPid = null;
-
 function cleanup() {
-    if (rcDummyPid) try { process.kill(-rcDummyPid); } catch {}
     if (configBackup !== null) writeFileSync(CONFIG_PATH, configBackup);
     try { rmSync(TMP, { recursive: true, force: true }); } catch {}
     if (httpServer) { httpServer.close(); httpServer = null; }
@@ -108,6 +105,9 @@ tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_u
 tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: "todo1" }] } }));
 tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: "running1", name: "Bash", input: { command: "npm test -- --coverage --watch" } }] } }));
 
+// Remote Control bridge_status entry for RC badge detection
+tlines.push(JSON.stringify({ timestamp: TS, type: "system", subtype: "bridge_status", content: "/remote-control is active." }));
+
 writeFileSync(TRANSCRIPT, tlines.join("\n") + "\n");
 
 // ─── Render ANSI ────────────────────────────────────────────────────────────
@@ -128,13 +128,6 @@ const INPUT = JSON.stringify({
 });
 
 const VARIANTS = ["dense", "dense-full", "semantic", "semantic-full", "adaptive", "adaptive-full"];
-
-// Spawn a dummy process matching "claude.*remote-control" for pgrep detection during -full renders
-const rcScript = join(TMP, "claude");
-writeFileSync(rcScript, "#!/bin/sh\nsleep 120", { mode: 0o755 });
-const rcDummy = spawn(rcScript, ["remote-control"], { stdio: "ignore", detached: true });
-rcDummyPid = rcDummy.pid;
-rcDummy.unref();
 
 for (const variant of VARIANTS) {
     const layout = variant.replace("-full", "");

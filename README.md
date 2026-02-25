@@ -97,11 +97,31 @@ That's it. Claude Code will pipe status data to ccsl on every update.
 
 ## Configuration
 
-Create `~/.claude/statusline-config.json` to customize behavior:
+### Interactive Setup
+
+The easiest way to configure ccsl is the interactive wizard:
+
+```bash
+ccsl setup
+```
+
+This walks you through preset selection, row composition, flex settings, and feature toggles — with a live preview of your statusline before saving.
+
+### Config File
+
+Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array defines which badge groups appear on each row:
 
 ```json
 {
-  "layout": "dense",
+  "rows": [
+    ["identity", "learning", "remoteControl"],
+    ["context", "usage", "config"],
+    ["git", "pr"],
+    "---",
+    ["transcript", "tools"],
+    ["agents"],
+    ["todos"]
+  ],
   "flexMode": "full-until-compact",
   "compactThreshold": 85,
   "flexPadding": 6,
@@ -113,14 +133,43 @@ Create `~/.claude/statusline-config.json` to customize behavior:
 }
 ```
 
+Each row is an array of badge group IDs. Use `"---"` for a separator line. Rows with no output (e.g., no agents running) are automatically hidden.
+
+### Badge Groups
+
+| ID | Badges |
+|---|---|
+| `identity` | Model/plan, duration, cost |
+| `context` | Context bar, token breakdown |
+| `usage` | API rate limit bar |
+| `git` | Repo, branch, file stats, ahead/behind, lines |
+| `config` | CLAUDE.md count, MCPs, hooks |
+| `pr` | Ticket marker, PR link |
+| `learning` | Recall, learn, instinct |
+| `remoteControl` | Remote control status |
+| `transcript` | Session transcript link |
+| `tools` | Running/completed tools, MCP tools |
+| `agents` | Running/completed agents |
+| `todos` | Todo progress |
+
+### Presets
+
+Three preset starting points (available via `ccsl setup`):
+
+- **Dense** (default) — Compact multi-row layout. Groups related badges together on shared rows.
+- **Semantic** — One category per row. More vertical, easier to scan.
+- **Adaptive** — All badges on a single auto-wrapping line.
+
 ### Layout & Display
 
 | Option | Description | Default |
 |---|---|---|
-| `layout` | Layout mode (`dense`, `semantic`, `adaptive`) | `dense` |
+| `rows` | Row composition array (see above) | Dense preset |
 | `flexMode` | Terminal width strategy (see [Width Modes](#width-modes)) | `full-until-compact` |
 | `compactThreshold` | Context % that triggers compact width in `full-until-compact` mode (1–99) | `85` |
 | `flexPadding` | Chars subtracted from terminal width in `full` mode | `6` |
+
+> **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets.
 
 ### Feature Toggles
 

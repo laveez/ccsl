@@ -121,6 +121,45 @@ export interface UnifiedStatuslineData {
 
 export type LayoutMode = "semantic" | "dense" | "adaptive";
 
+export type BadgeGroup =
+    | "identity" | "context" | "usage" | "git" | "config" | "pr"
+    | "learning" | "remoteControl" | "transcript" | "tools" | "agents" | "todos";
+
+export type RowConfig = (BadgeGroup[] | "---")[];
+
+export const BADGE_GROUPS: BadgeGroup[] = [
+    "identity", "context", "usage", "git", "config", "pr",
+    "learning", "remoteControl", "transcript", "tools", "agents", "todos",
+];
+
+export const PRESET_DENSE: RowConfig = [
+    ["identity", "learning", "remoteControl"],
+    ["context", "usage", "config"],
+    ["git", "pr"],
+    "---",
+    ["transcript", "tools"],
+    ["agents"],
+    ["todos"],
+];
+
+export const PRESET_SEMANTIC: RowConfig = [
+    ["identity"],
+    ["context", "usage"],
+    ["git"],
+    ["config", "pr"],
+    ["learning", "remoteControl"],
+    "---",
+    ["transcript", "tools"],
+    ["agents"],
+    ["todos"],
+];
+
+export const PRESET_ADAPTIVE: RowConfig = [
+    ["identity", "context", "usage", "git", "config", "pr", "learning", "remoteControl", "transcript", "tools", "agents", "todos"],
+];
+
+export const DEFAULT_ROWS: RowConfig = PRESET_DENSE;
+
 export type FlexMode = "full" | "full-minus-40" | "full-until-compact";
 
 export const BADGE = {
@@ -139,7 +178,8 @@ export const BADGE = {
 export type BadgeColor = keyof typeof BADGE;
 
 export interface CcslConfig {
-    layout: LayoutMode;
+    layout?: LayoutMode;
+    rows?: RowConfig;
     flexMode?: FlexMode;
     compactThreshold?: number;
     flexPadding?: number;

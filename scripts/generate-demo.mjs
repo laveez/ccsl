@@ -29,8 +29,12 @@ let configBackup;
 try { configBackup = readFileSync(CONFIG_PATH, "utf8"); } catch { configBackup = null; }
 let httpServer = null;
 
+const SNAPSHOT_DIR = join(process.env.HOME, ".claude/.learn-snapshots");
+const DEMO_SNAPSHOTS = ["transcript-compaction-1.md", "transcript-compaction-2.md"];
+
 function cleanup() {
     if (configBackup !== null) writeFileSync(CONFIG_PATH, configBackup);
+    for (const f of DEMO_SNAPSHOTS) try { rmSync(join(SNAPSHOT_DIR, f)); } catch {}
     try { rmSync(TMP, { recursive: true, force: true }); } catch {}
     if (httpServer) { httpServer.close(); httpServer = null; }
 }
@@ -109,6 +113,12 @@ tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_u
 tlines.push(JSON.stringify({ timestamp: TS, type: "system", subtype: "bridge_status", content: "/remote-control is active." }));
 
 writeFileSync(TRANSCRIPT, tlines.join("\n") + "\n");
+
+// ─── Fake learn-snapshots for compaction badge ──────────────────────────────
+
+console.log("==> Creating demo compaction snapshots");
+mkdirSync(SNAPSHOT_DIR, { recursive: true });
+for (const f of DEMO_SNAPSHOTS) writeFileSync(join(SNAPSHOT_DIR, f), "demo snapshot");
 
 // ─── Render ANSI ────────────────────────────────────────────────────────────
 

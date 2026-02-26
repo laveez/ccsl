@@ -102,6 +102,7 @@ export function generateMockData(): UnifiedStatuslineData {
                 correctionsThisSession: 0,
                 unprocessedObservations: 3,
             },
+            compactionCount: 1,
         },
     };
 }

@@ -351,6 +351,8 @@ export const EMOJI_REPLACEMENTS: [RegExp, string][] = [
     [/\ud83d\udd17/g, "PR"],      // 🔗
     [/\ud83e\udde9/g, "R"],       // 🧩
     [/\ud83d\udcda/g, "L"],       // 📚
+    [/\ud83d\udce6/g, "C"],       // 📦
+    [/\ud83e\uddec/g, "I"],       // 🧬
     [/\ud83d\udcdd/g, "log"],     // 📝
     [/\ud83d\udd0c/g, "mcp:"],   // 🔌
     [/\ud83d\udcf1/g, "TG"],     // 📱

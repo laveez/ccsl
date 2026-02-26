@@ -107,6 +107,7 @@ export interface LearningStatus {
     autoLearn: boolean;
     lastLearnedDate: string | null;
     instinctStatus: InstinctStatus | null;
+    compactionCount: number;
 }
 
 export interface UnifiedStatuslineData {

@@ -235,6 +235,12 @@ function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
         badges.push(badge("steel", `📚${obsSuffix}`));
     }
 
+    if (learningStatus.compactionCount > 0) {
+        const count = learningStatus.compactionCount;
+        const color: BadgeColor = count >= 3 ? "orange" : "gold";
+        badges.push(badge(color, `📦 ${count}`));
+    }
+
     const inst = learningStatus.instinctStatus;
     if (inst) {
         let text = `🧬 ${inst.activeCount}`;

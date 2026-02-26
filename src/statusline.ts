@@ -756,7 +756,7 @@ function getInstinctStatus(claudeDir: string): InstinctStatus | null {
     }
 }
 
-export function getLearningStatus(sessionStart: Date | undefined): LearningStatus {
+export function getLearningStatus(sessionStart: Date | undefined, transcriptPath?: string): LearningStatus {
     const claudeDir = join(homedir(), ".claude");
 
     let recalledThisSession = false;
@@ -805,7 +805,21 @@ export function getLearningStatus(sessionStart: Date | undefined): LearningStatu
 
     const instinctStatus = getInstinctStatus(claudeDir);
 
-    return { recalledThisSession, learningPending, autoLearn, lastLearnedDate, instinctStatus };
+    let compactionCount = 0;
+    if (transcriptPath) {
+        try {
+            const sessionId = transcriptPath.split("/").pop()?.replace(/\.jsonl$/, "");
+            if (sessionId) {
+                const snapshotDir = join(claudeDir, ".learn-snapshots");
+                if (existsSync(snapshotDir)) {
+                    const files = readdirSync(snapshotDir);
+                    compactionCount = files.filter(f => f.startsWith(sessionId)).length;
+                }
+            }
+        } catch { /* ignore */ }
+    }
+
+    return { recalledThisSession, learningPending, autoLearn, lastLearnedDate, instinctStatus, compactionCount };
 }
 
 // ============================================================================
@@ -937,7 +951,7 @@ export async function main() {
     const prInfo = gitInfo ? await fetchPrInfo() : null;
 
     const learningStatus = config.features.learning
-        ? getLearningStatus(transcriptData?.sessionStart)
+        ? getLearningStatus(transcriptData?.sessionStart, input.transcript_path)
         : null;
 
     const maybeTerminalWidth = getTerminalWidth();

@@ -166,6 +166,10 @@ badges.push(row("Learn status",
     badge("📚 ⚠ 500", C.rose),
     badge("📚 ✓", C.steel),
 ));
+badges.push(row("Compaction count",
+    badge("📦 1", C.gold),
+    badge("📦 3", C.orange),
+));
 badges.push(row("Instinct status",
     badge("🧬 21", C.steel),
     badge("🧬 21 ▲3", C.gold),

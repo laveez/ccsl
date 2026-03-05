@@ -19,6 +19,16 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ![Demo](docs/demo.gif)
 
+### What's New
+
+**v0.2.7** — Documentation and release housekeeping.
+
+**v0.2.5** — 7-day usage badge with gradient coloring, usage API rate limit resilience with stale `~` fallback, last-known-good cache across API failures.
+
+**v0.2.4** — Compaction badge (`📦`), emoji terminal fallbacks.
+
+See all changes in [Releases](https://github.com/laveez/ccsl/releases).
+
 ### Contents
 
 - [Layouts](#layouts) · [Badge Reference](#badge-reference) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Width Modes](#width-modes)

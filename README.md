@@ -45,7 +45,8 @@ Every badge the statusline can show, with all possible states:
 | **Cost** | Cumulative API cost. Background shifts green → gold → orange → red | `$0.42`, `$4.82`, `$50`, `$123` |
 | **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
 | **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
-| **Usage rate limit** | Anthropic API utilization with reset timer. `~` prefix means data is stale (API temporarily unavailable) | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red. Stale: `⚡ ~42% (~3h / 5h)` |
+| **Usage (5h)** | 5-hour API utilization bar with reset timer. `~` prefix means stale (API temporarily unavailable) | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red. Stale: `⚡ ~42%` |
+| **Usage (7d)** | 7-day rolling utilization | `7d 26%`, stale: `7d ~26%` |
 | **Repo name** | Git repository name | `ccsl`, `my-project` |
 | **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
 | **File stats** | Dirty file counts: modified (!), added (+), deleted (✘), untracked (?) | `!3`, `!1+2?4`, `!5+3✘1?2` |

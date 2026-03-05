@@ -156,7 +156,14 @@ function buildUsageBadges(usageData: UsageData | null): string[] {
     const resetStr = resetTime ? ` (${staleMarker}${resetTime} / 5h)` : "";
     const barText = ` ${staleMarker}${usageData.fiveHour}%${resetStr} `;
     const inlineBar = renderBarWithText(usageData.fiveHour, barText);
-    return [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
+    const badges = [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
+    if (usageData.sevenDay !== null) {
+        const bg7d = gradientColor([
+            [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
+        ], usageData.sevenDay);
+        badges.push(badgeGradient(bg7d, `7d ${staleMarker}${usageData.sevenDay}%`));
+    }
+    return badges;
 }
 
 function buildGitBadges(gitInfo: GitRepoInfo | null, input: StatuslineInput): string[] {

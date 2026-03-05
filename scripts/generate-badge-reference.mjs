@@ -103,13 +103,21 @@ badges.push(row("Cache breakdown",
 
 // ── Usage (optional) ──
 badges.push(section("Usage Rate Limit &nbsp;<span class=\"feature-tag\">features.usage</span>"));
-badges.push(row("Usage bar",
+badges.push(row("5h usage bar",
     barBadge("⚡", 12, C.barGreen, " 12% (4h 23m / 5h) ", C.orange),
     barBadge("⚡", 65, C.barYellow, " 65% (1h 45m / 5h) ", C.orange),
     barBadge("⚡", 95, C.barRed, " 95% (15m / 5h) ", C.orange),
 ));
-badges.push(row("Usage (stale)",
+badges.push(row("7d usage (gradient)",
+    badge("7d 10%", C.green),
+    badge("7d 26%", gradient(0.52, C.green, C.orange)),
+    badge("7d 50%", C.orange),
+    badge("7d 80%", gradient(0.5, C.orange, C.rose)),
+    badge("7d 95%", C.rose),
+));
+badges.push(row("Stale",
     barBadge("⚡", 42, C.barGreen, " ~42% (~3h 10m / 5h) ", C.orange),
+    badge("7d ~26%", gradient(0.52, C.green, C.orange)),
 ));
 
 // ── Git ──

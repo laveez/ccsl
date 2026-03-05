@@ -436,8 +436,8 @@ export function countConfigs(cwd?: string): ConfigCounts {
 // Usage API
 // ============================================================================
 
-const USAGE_CACHE_TTL_MS = 60_000;
-const USAGE_CACHE_FAILURE_TTL_MS = 15_000;
+const USAGE_CACHE_TTL_MS = 180_000;
+const USAGE_CACHE_FAILURE_TTL_MS = 300_000;
 const KEYCHAIN_TIMEOUT_MS = 5000;
 const KEYCHAIN_BACKOFF_MS = 60_000;
 
@@ -457,6 +457,8 @@ interface UsageApiResponse {
 interface UsageCacheFile {
     data: UsageData;
     timestamp: number;
+    lastGood?: UsageData;
+    lastGoodTimestamp?: number;
 }
 
 function getUsageCachePath(): string {
@@ -492,6 +494,16 @@ function writeRcCache(transcriptPath: string): void {
     }
 }
 
+function hydrateUsageDates(data: UsageData): UsageData {
+    if (data.fiveHourResetAt) {
+        data.fiveHourResetAt = new Date(data.fiveHourResetAt);
+    }
+    if (data.sevenDayResetAt) {
+        data.sevenDayResetAt = new Date(data.sevenDayResetAt);
+    }
+    return data;
+}
+
 function readUsageCache(now: number): UsageData | null {
     try {
         const cachePath = getUsageCachePath();
@@ -501,16 +513,17 @@ function readUsageCache(now: number): UsageData | null {
         const cache: UsageCacheFile = JSON.parse(content);
 
         const ttl = cache.data.apiUnavailable ? USAGE_CACHE_FAILURE_TTL_MS : USAGE_CACHE_TTL_MS;
-        if (now - cache.timestamp >= ttl) return null;
+        if (now - cache.timestamp < ttl) {
+            // Cache entry is fresh — but if it's a failure entry, return stale last-known-good instead
+            if (cache.data.apiUnavailable && cache.lastGood) {
+                return hydrateUsageDates({ ...cache.lastGood, stale: true });
+            }
+            return hydrateUsageDates(cache.data);
+        }
 
-        const data = cache.data;
-        if (data.fiveHourResetAt) {
-            data.fiveHourResetAt = new Date(data.fiveHourResetAt);
-        }
-        if (data.sevenDayResetAt) {
-            data.sevenDayResetAt = new Date(data.sevenDayResetAt);
-        }
-        return data;
+        // Cache expired — if we have last-known-good data, return it as stale
+        // (caller will attempt a fresh fetch)
+        return null;
     } catch {
         return null;
     }
@@ -526,6 +539,26 @@ function writeUsageCache(data: UsageData, timestamp: number): void {
         }
 
         const cache: UsageCacheFile = { data, timestamp };
+
+        // Preserve last-known-good data across failures
+        if (data.apiUnavailable) {
+            try {
+                const existing = existsSync(cachePath)
+                    ? JSON.parse(readFileSync(cachePath, "utf8")) as UsageCacheFile
+                    : null;
+                if (existing?.lastGood) {
+                    cache.lastGood = existing.lastGood;
+                    cache.lastGoodTimestamp = existing.lastGoodTimestamp;
+                } else if (existing?.data && !existing.data.apiUnavailable) {
+                    cache.lastGood = existing.data;
+                    cache.lastGoodTimestamp = existing.timestamp;
+                }
+            } catch { /* ignore */ }
+        } else {
+            cache.lastGood = data;
+            cache.lastGoodTimestamp = timestamp;
+        }
+
         writeFileSync(cachePath, JSON.stringify(cache), "utf8");
     } catch {
         // Ignore cache write failures
@@ -660,6 +693,18 @@ function fetchUsageApi(accessToken: string): Promise<UsageApiResponse | null> {
     });
 }
 
+function readLastGoodFromCache(planName: string | null): UsageData | null {
+    try {
+        const cachePath = getUsageCachePath();
+        if (!existsSync(cachePath)) return null;
+        const cache: UsageCacheFile = JSON.parse(readFileSync(cachePath, "utf8"));
+        if (cache.lastGood) {
+            return hydrateUsageDates({ ...cache.lastGood, planName: planName ?? cache.lastGood.planName, stale: true });
+        }
+    } catch { /* ignore */ }
+    return null;
+}
+
 export async function getUsageData(): Promise<UsageData | null> {
     const now = Date.now();
 
@@ -688,7 +733,7 @@ export async function getUsageData(): Promise<UsageData | null> {
                 apiUnavailable: true,
             };
             writeUsageCache(failureResult, now);
-            return failureResult;
+            return readLastGoodFromCache(planName);
         }
 
         const result: UsageData = {

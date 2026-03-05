@@ -108,6 +108,9 @@ badges.push(row("Usage bar",
     barBadge("⚡", 65, C.barYellow, " 65% (1h 45m / 5h) ", C.orange),
     barBadge("⚡", 95, C.barRed, " 95% (15m / 5h) ", C.orange),
 ));
+badges.push(row("Usage (stale)",
+    barBadge("⚡", 42, C.barGreen, " ~42% (~3h 10m / 5h) ", C.orange),
+));
 
 // ── Git ──
 badges.push(section("Git"));

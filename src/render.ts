@@ -151,9 +151,10 @@ function buildContextBadges(input: StatuslineInput): string[] {
 
 function buildUsageBadges(usageData: UsageData | null): string[] {
     if (!usageData || usageData.fiveHour === null) return [];
+    const staleMarker = usageData.stale ? "~" : "";
     const resetTime = formatTimeUntil(usageData.fiveHourResetAt);
-    const resetStr = resetTime ? ` (${resetTime} / 5h)` : "";
-    const barText = ` ${usageData.fiveHour}%${resetStr} `;
+    const resetStr = resetTime ? ` (${staleMarker}${resetTime} / 5h)` : "";
+    const barText = ` ${staleMarker}${usageData.fiveHour}%${resetStr} `;
     const inlineBar = renderBarWithText(usageData.fiveHour, barText);
     return [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
 }

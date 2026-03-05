@@ -45,7 +45,7 @@ Every badge the statusline can show, with all possible states:
 | **Cost** | Cumulative API cost. Background shifts green → gold → orange → red | `$0.42`, `$4.82`, `$50`, `$123` |
 | **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
 | **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
-| **Usage rate limit** | Anthropic API utilization with reset timer | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red |
+| **Usage rate limit** | Anthropic API utilization with reset timer. `~` prefix means data is stale (API temporarily unavailable) | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red. Stale: `⚡ ~42% (~3h / 5h)` |
 | **Repo name** | Git repository name | `ccsl`, `my-project` |
 | **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
 | **File stats** | Dirty file counts: modified (!), added (+), deleted (✘), untracked (?) | `!3`, `!1+2?4`, `!5+3✘1?2` |
@@ -225,7 +225,7 @@ ccsl is a [StatusLine command](https://code.claude.com/docs/en/settings) — Cla
 
 When `features.usage` is **disabled** (the default), ccsl reads only local files (git state, transcript, config). No network requests are made and no credentials are accessed.
 
-When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~/.claude/.credentials.json` (or macOS Keychain) to query the Anthropic usage API. The token is used solely for this request and is never stored, logged, or transmitted elsewhere.
+When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~/.claude/.credentials.json` (or macOS Keychain) to query the Anthropic usage API. The token is used solely for this request and is never stored, logged, or transmitted elsewhere. Responses are cached locally for 3 minutes to minimize API calls. If the API is temporarily unavailable (e.g., rate-limited), the last successful value is shown with a `~` stale marker and retries are backed off to every 5 minutes.
 
 ---
 

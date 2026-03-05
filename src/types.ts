@@ -57,6 +57,7 @@ export interface UsageData {
     fiveHourResetAt: Date | null;
     sevenDayResetAt: Date | null;
     apiUnavailable?: boolean;
+    stale?: boolean;
 }
 
 export interface TranscriptData {

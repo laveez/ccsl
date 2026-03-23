@@ -152,6 +152,10 @@ badges.push(row("Config summary",
     badge("📋 2 CLAUDE.md | 3 hooks", C.purple),
     badge("📋 1 CLAUDE.md | 5 MCPs | 3 hooks", C.purple),
 ));
+badges.push(row("Added dirs",
+    badge("+1 dir", C.steel),
+    badge("+3 dirs", C.steel),
+));
 badges.push(row("Ticket marker",
     badge("🎫 PROJ-123", C.purple),
     badge("🎫 FE-456", C.purple),
@@ -159,9 +163,11 @@ badges.push(row("Ticket marker",
 badges.push(row("PR link",
     badge("🔗 PR#42 (D)", C.blue),
     badge("🔗 PR#42 (O)", C.blue),
+    badge("🔗 PR#42 (A)", C.green),
+    badge("🔗 PR#42 (CR)", C.rose),
     badge("🔗 PR#42 (✅)", C.blue),
-    badge("🔗 PR#42 (M)", C.blue),
-    badge("🔗 PR#42 (C)", C.blue),
+    badge("🔗 PR#42 (M)", C.purple),
+    badge("🔗 PR#42 (C)", C.steel),
 ));
 
 // ── Learning (optional) ──
@@ -196,9 +202,9 @@ badges.push(row("RC status",
 
 // ── Transcript & Tools ──
 badges.push(section("Transcript & Tools"));
-badges.push(row("Transcript link",
+badges.push(row("Transcript / Session",
     badge("📝 session-abc.jsonl", C.steel),
-    badge("📝 long-ses…jsonl", C.steel),
+    badge("📝 feature-auth-refactor", C.steel),
 ));
 badges.push(row("Running tool",
     badge("◐ Bash: npm test --coverage", C.cyan),

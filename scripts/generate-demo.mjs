@@ -129,12 +129,18 @@ mkdirSync(RENDERS);
 const INPUT = JSON.stringify({
     hook_event_name: "Status", session_id: "demo",
     transcript_path: TRANSCRIPT, cwd: DEMO_REPO,
-    model: { id: "claude-opus-4-6", display_name: "Opus" },
-    workspace: { current_dir: DEMO_REPO, project_dir: DEMO_REPO },
-    version: "1.0.80", output_style: { name: "default" },
-    cost: { total_cost_usd: 4.82, total_duration_ms: 1854000, total_lines_added: 284, total_lines_removed: 67 },
-    context_window: { total_input_tokens: 95000, total_output_tokens: 18000, context_window_size: 200000,
-        current_usage: { input_tokens: 28000, cache_creation_input_tokens: 45000, cache_read_input_tokens: 22000 } }
+    session_name: "feature-auth-refactor",
+    model: { id: "claude-opus-4-6", display_name: "Opus 4.6 (1M context)" },
+    workspace: { current_dir: DEMO_REPO, project_dir: DEMO_REPO, added_dirs: ["/tmp/shared-utils"] },
+    version: "2.1.81", output_style: { name: "default" },
+    cost: { total_cost_usd: 4.82, total_duration_ms: 1854000, total_api_duration_ms: 1200000, total_lines_added: 284, total_lines_removed: 67 },
+    context_window: { total_input_tokens: 95000, total_output_tokens: 18000, context_window_size: 1000000,
+        current_usage: { input_tokens: 28000, cache_creation_input_tokens: 45000, cache_read_input_tokens: 22000 },
+        used_percentage: 10, remaining_percentage: 90 },
+    rate_limits: {
+        five_hour: { used_percentage: 42, resets_at: Math.floor(Date.now() / 1000) + 7200 },
+        seven_day: { used_percentage: 8, resets_at: Math.floor(Date.now() / 1000) + 259200 },
+    },
 });
 
 const VARIANTS = ["dense", "dense-full", "semantic", "semantic-full", "adaptive", "adaptive-full"];

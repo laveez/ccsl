@@ -21,11 +21,11 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ### What's New
 
+**v0.3.0** — Native rate limits from Claude Code 2.1.80+ (no more API calls/keychain access), PR review decision badges with dynamic colors (green approved, rose changes requested, purple merged), `added_dirs` badge, session name in transcript badge.
+
 **v0.2.7** — Documentation and release housekeeping.
 
 **v0.2.5** — 7-day usage badge with gradient coloring, usage API rate limit resilience with stale `~` fallback, last-known-good cache across API failures.
-
-**v0.2.4** — Compaction badge (`📦`), emoji terminal fallbacks.
 
 See all changes in [Releases](https://github.com/laveez/ccsl/releases).
 

@@ -22,6 +22,7 @@ import type {
     ConfigCounts,
     UsageData,
     CcslConfig,
+    RateLimitWindow,
 } from "./types.js";
 import {
     extractWorktreeName,
@@ -160,7 +161,7 @@ export async function fetchGitRepoInfo(projectDir: string): Promise<GitRepoInfo 
 export async function fetchPrInfo(): Promise<PrInfo | null> {
     try {
         const { stdout } = await execFileP(
-            "gh", ["pr", "view", "--json=number,url,title,isDraft,state,mergeStateStatus"],
+            "gh", ["pr", "view", "--json=number,url,title,isDraft,state,mergeStateStatus,reviewDecision"],
         );
         const parsed = JSON.parse(stdout);
         return {
@@ -170,6 +171,7 @@ export async function fetchPrInfo(): Promise<PrInfo | null> {
             isDraft: parsed.isDraft,
             state: parsed.state,
             mergeStateStatus: parsed.mergeStateStatus,
+            reviewDecision: parsed.reviewDecision || undefined,
         };
     } catch {
         return null;
@@ -705,6 +707,17 @@ function readLastGoodFromCache(planName: string | null): UsageData | null {
     return null;
 }
 
+function usageFromRateLimits(rateLimits: { five_hour?: RateLimitWindow; seven_day?: RateLimitWindow }): UsageData {
+    return {
+        planName: null,
+        fiveHour: rateLimits.five_hour != null ? Math.round(rateLimits.five_hour.used_percentage) : null,
+        sevenDay: rateLimits.seven_day != null ? Math.round(rateLimits.seven_day.used_percentage) : null,
+        fiveHourResetAt: rateLimits.five_hour ? new Date(rateLimits.five_hour.resets_at * 1000) : null,
+        sevenDayResetAt: rateLimits.seven_day ? new Date(rateLimits.seven_day.resets_at * 1000) : null,
+    };
+}
+
+/** @deprecated — use native rate_limits from StatuslineInput when available */
 export async function getUsageData(): Promise<UsageData | null> {
     const now = Date.now();
 
@@ -970,6 +983,8 @@ export async function main() {
     const projectDir = getProjectDir(input);
     const config = readStatuslineConfig();
 
+    const nativeUsage = input.rate_limits ? usageFromRateLimits(input.rate_limits) : null;
+
     const promises: [
         Promise<GitRepoInfo | null>,
         Promise<TranscriptData | null>,
@@ -979,7 +994,7 @@ export async function main() {
         fetchGitRepoInfo(projectDir),
         parseTranscriptFull(input.transcript_path),
         Promise.resolve(countConfigs(projectDir)),
-        getUsageData(),
+        nativeUsage ? Promise.resolve(nativeUsage) : getUsageData(),
     ];
 
     const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);

@@ -31,6 +31,7 @@ import {
     stripEmojis,
     colorSegment,
     joinSegmentsWithWrap,
+    resolveSeparator,
     badge,
     badgeRich,
     badgeGradient,
@@ -44,6 +45,7 @@ import {
     getToolDisplayName,
     extractTicketMarker,
     getPrStatusSuffix,
+    getPrBadgeColor,
     getModelName,
     getCost,
     getDuration,
@@ -152,16 +154,18 @@ function buildContextBadges(input: StatuslineInput): string[] {
 function buildUsageBadges(usageData: UsageData | null): string[] {
     if (!usageData || usageData.fiveHour === null) return [];
     const staleMarker = usageData.stale ? "~" : "";
+    const fiveHour = Math.round(usageData.fiveHour);
     const resetTime = formatTimeUntil(usageData.fiveHourResetAt);
     const resetStr = resetTime ? ` (${staleMarker}${resetTime} / 5h)` : "";
-    const barText = ` ${staleMarker}${usageData.fiveHour}%${resetStr} `;
-    const inlineBar = renderBarWithText(usageData.fiveHour, barText);
+    const barText = ` ${staleMarker}${fiveHour}%${resetStr} `;
+    const inlineBar = renderBarWithText(fiveHour, barText);
     const badges = [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
     if (usageData.sevenDay !== null) {
+        const sevenDay = Math.round(usageData.sevenDay);
         const bg7d = gradientColor([
             [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
-        ], usageData.sevenDay);
-        badges.push(badgeGradient(bg7d, `7d ${staleMarker}${usageData.sevenDay}%`));
+        ], sevenDay);
+        badges.push(badgeGradient(bg7d, `7d ${staleMarker}${sevenDay}%`));
     }
     return badges;
 }
@@ -194,14 +198,18 @@ function buildGitBadges(gitInfo: GitRepoInfo | null, input: StatuslineInput): st
     return badges;
 }
 
-function buildConfigBadges(configCounts: ConfigCounts | null): string[] {
+function buildConfigBadges(configCounts: ConfigCounts | null, addedDirs?: string[]): string[] {
     if (!configCounts) return [];
     const parts: string[] = [];
     if (configCounts.claudeMdCount > 0) parts.push(`${configCounts.claudeMdCount} CLAUDE.md`);
     if (configCounts.mcpCount > 0) parts.push(`${configCounts.mcpCount} MCPs`);
     if (configCounts.hooksCount > 0) parts.push(`${configCounts.hooksCount} hooks`);
     if (parts.length === 0) return [];
-    return [badge("purple", `📋 ${parts.join(" | ")}`)];
+    const badges = [badge("purple", `📋 ${parts.join(" | ")}`)];
+    if (addedDirs && addedDirs.length > 0) {
+        badges.push(badge("steel", `+${addedDirs.length} dir${addedDirs.length > 1 ? "s" : ""}`));
+    }
+    return badges;
 }
 
 function buildPrBadges(prInfo: PrInfo | null): string[] {
@@ -212,8 +220,9 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
         if (ticket) badges.push(badge("purple", `🎫 ${ticket}`));
     }
     const statusSuffix = getPrStatusSuffix(prInfo);
+    const color = getPrBadgeColor(prInfo);
     const prText = `🔗 PR#${prInfo.number}${statusSuffix}`;
-    const prBadge = badge("blue", prText);
+    const prBadge = badge(color, prText);
     badges.push(`\x1b]8;;${prInfo.url}\x07${prBadge}\x1b]8;;\x07`);
     return badges;
 }
@@ -267,10 +276,15 @@ function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
     return badges;
 }
 
-function buildTranscriptBadge(transcriptPath: string): string {
-    const name = transcriptPath.split("/").pop() || transcriptPath;
-    const shortName = name.length > 20 ? name.slice(0, 8) + "…jsonl" : name;
-    const inner = badge("steel", `📝 ${shortName}`);
+function buildTranscriptBadge(transcriptPath: string, sessionName?: string): string {
+    let label: string;
+    if (sessionName) {
+        label = sessionName.length > 25 ? sessionName.slice(0, 24) + "…" : sessionName;
+    } else {
+        const name = transcriptPath.split("/").pop() || transcriptPath;
+        label = name.length > 20 ? name.slice(0, 8) + "…jsonl" : name;
+    }
+    const inner = badge("steel", `📝 ${label}`);
     return `\x1b]8;;file://${transcriptPath}\x07${inner}\x1b]8;;\x07`;
 }
 
@@ -359,11 +373,11 @@ const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
     context: (data) => buildContextBadges(data.input),
     usage: (data, config) => config.features.usage ? buildUsageBadges(data.usageData) : [],
     git: (data) => buildGitBadges(data.gitInfo, data.input),
-    config: (data) => buildConfigBadges(data.configCounts),
+    config: (data) => buildConfigBadges(data.configCounts, data.input.workspace.added_dirs),
     pr: (data) => buildPrBadges(data.prInfo),
     learning: (data, config) => config.features.learning ? buildLearningBadges(data.learningStatus) : [],
     remoteControl: (data, config) => config.features.remoteControl ? buildRemoteControlBadge(data.transcriptData?.remoteControlActive === true) : [],
-    transcript: (data) => [buildTranscriptBadge(data.input.transcript_path)],
+    transcript: (data) => [buildTranscriptBadge(data.input.transcript_path, data.input.session_name)],
     tools: (data) => data.transcriptData?.tools ? buildToolBadges(data.transcriptData.tools, data.input.workspace.current_dir) : [],
     agents: (data) => data.transcriptData?.agents?.length ? buildAgentBadges(data.transcriptData.agents, data.input.workspace.current_dir) : [],
     todos: (data) => data.transcriptData?.todos?.length ? buildTodoBadges(data.transcriptData.todos) : [],
@@ -385,7 +399,8 @@ function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: C
             if (builder) badges.push(...builder(data, config));
         }
         if (badges.length > 0) {
-            lines.push(joinSegmentsWithWrap(badges, maxWidth));
+            const sep = resolveSeparator(config.badgeStyle);
+            lines.push(joinSegmentsWithWrap(badges, maxWidth, config.badgeSpacing !== false, sep));
         }
     }
 
@@ -447,6 +462,8 @@ export function readStatuslineConfig(): CcslConfig {
             flexMode: validFlexMode,
             compactThreshold: typeof config.compactThreshold === "number" ? config.compactThreshold : undefined,
             flexPadding: typeof config.flexPadding === "number" ? config.flexPadding : undefined,
+            badgeSpacing: config.badgeSpacing !== false,
+            badgeStyle: typeof config.badgeStyle === "string" ? config.badgeStyle : undefined,
             features: {
                 usage: features.usage === true,
                 learning: features.learning === true,

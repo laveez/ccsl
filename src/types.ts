@@ -4,15 +4,22 @@ export interface CurrentUsage {
     cache_read_input_tokens: number;
 }
 
+export interface RateLimitWindow {
+    used_percentage: number;
+    resets_at: number;
+}
+
 export interface StatuslineInput {
     model: { display_name: string };
-    workspace: { current_dir: string; project_dir: string };
+    workspace: { current_dir: string; project_dir: string; added_dirs?: string[] };
     version: string;
     transcript_path: string;
+    session_name?: string;
     output_style?: { name: string };
     cost: {
         total_cost_usd: number;
         total_duration_ms: number;
+        total_api_duration_ms?: number;
         total_lines_added: number;
         total_lines_removed: number;
     };
@@ -21,6 +28,20 @@ export interface StatuslineInput {
         total_output_tokens: number;
         context_window_size: number;
         current_usage: CurrentUsage | null;
+        used_percentage?: number;
+        remaining_percentage?: number;
+    };
+    rate_limits?: {
+        five_hour?: RateLimitWindow;
+        seven_day?: RateLimitWindow;
+    };
+    exceeds_200k_tokens?: boolean;
+    vim?: { mode: string };
+    worktree?: {
+        name: string;
+        path: string;
+        branch: string;
+        original_repo_dir: string;
     };
 }
 
@@ -93,6 +114,7 @@ export interface PrInfo {
     isDraft?: boolean;
     state?: string;
     mergeStateStatus?: string;
+    reviewDecision?: string;
 }
 
 export interface InstinctStatus {
@@ -179,12 +201,16 @@ export const BADGE = {
 
 export type BadgeColor = keyof typeof BADGE;
 
+export type BadgeStyle = "flat" | "powerline" | "rounded" | string;
+
 export interface CcslConfig {
     layout?: LayoutMode;
     rows?: RowConfig;
     flexMode?: FlexMode;
     compactThreshold?: number;
     flexPadding?: number;
+    badgeSpacing?: boolean;
+    badgeStyle?: BadgeStyle;
     features: {
         usage: boolean;
         learning: boolean;

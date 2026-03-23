@@ -31,6 +31,41 @@ export const RESET_ALL = "\x1b[0m";
 export const RESET_BG = "\x1b[49m";
 export const RESET_FG = "\x1b[39m";
 
+function fgRgb(r: number, g: number, b: number): string {
+    return `\x1b[38;2;${r};${g};${b}m`;
+}
+
+const STYLE_SEPARATORS: Record<string, string> = {
+    powerline: "\uE0B0",
+    rounded: "\uE0B4",
+};
+
+export function resolveSeparator(style: string | undefined): string | null {
+    if (!style || style === "flat") return null;
+    return STYLE_SEPARATORS[style] ?? style;
+}
+
+function extractFirstBg(segment: string): [number, number, number] | null {
+    const m = segment.match(/\x1b\[48;2;(\d+);(\d+);(\d+)m/);
+    if (!m) return null;
+    return [parseInt(m[1]), parseInt(m[2]), parseInt(m[3])];
+}
+
+function extractLastBg(segment: string): [number, number, number] | null {
+    const re = /\x1b\[48;2;(\d+);(\d+);(\d+)m/g;
+    let last: RegExpExecArray | null = null;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(segment)) !== null) last = m;
+    if (!last) return null;
+    return [parseInt(last[1]), parseInt(last[2]), parseInt(last[3])];
+}
+
+function stripLastReset(s: string): string {
+    const idx = s.lastIndexOf("\x1b[0m");
+    if (idx === -1) return s;
+    return s.slice(0, idx) + s.slice(idx + 4);
+}
+
 // Strip ANSI escape codes to get visible text length
 export function stripAnsi(str: string): string {
     const withoutOsc = str.replace(/\x1b\]8;;[^\x07]*\x07/g, "");
@@ -149,11 +184,18 @@ export function truncateToWidth(str: string, maxWidth: number): string {
 export function joinSegmentsWithWrap(
     segments: string[],
     maxWidth: number,
+    spacing: boolean = true,
+    separator: string | null = null,
 ): string {
     if (maxWidth <= 0) {
         return segments.join("");
     }
 
+    if (separator) {
+        return joinPowerline(segments, maxWidth, separator);
+    }
+
+    const gap = spacing ? 1 : 0;
     let output = "";
     let currentLineWidth = 0;
 
@@ -170,9 +212,58 @@ export function joinSegmentsWithWrap(
 
         output += segment;
         output += reset();
-        output += " ";
-        currentLineWidth += segmentWidth + 1;
+        if (spacing) output += " ";
+        currentLineWidth += segmentWidth + gap;
     }
+
+    return output;
+}
+
+function joinPowerline(segments: string[], maxWidth: number, sep: string): string {
+    let output = "";
+    let currentLineWidth = 0;
+    let prevBg: [number, number, number] | null = null;
+
+    for (let i = 0; i < segments.length; i++) {
+        const segment = segments[i];
+        const segmentWidth = getVisibleWidth(segment);
+        const curBg = extractLastBg(segment);
+
+        if (
+            currentLineWidth > 0 &&
+            currentLineWidth + 1 + segmentWidth > maxWidth
+        ) {
+            // Close current line with trailing separator
+            if (prevBg) {
+                output += `${fgRgb(...prevBg)}\x1b[49m${sep}`;
+            }
+            output += reset() + "\x1b[K\n";
+            currentLineWidth = 0;
+            prevBg = null;
+        }
+
+        // Transition separator between badges
+        if (prevBg && currentLineWidth > 0) {
+            const nextBg = extractFirstBg(segment);
+            if (nextBg) {
+                output += `${fgRgb(...prevBg)}${bgRgb(...nextBg)}${sep}`;
+            } else {
+                output += `${fgRgb(...prevBg)}\x1b[49m${sep}`;
+            }
+            currentLineWidth += 1;
+        }
+
+        output += stripLastReset(segment);
+        currentLineWidth += segmentWidth;
+        prevBg = curBg;
+    }
+
+    // Trailing separator after last badge
+    if (prevBg) {
+        output += `${fgRgb(...prevBg)}\x1b[49m${sep}`;
+        currentLineWidth += 1;
+    }
+    output += reset();
 
     return output;
 }
@@ -452,8 +543,18 @@ export function getPrStatusSuffix(prInfo: PrInfo): string {
     if (prInfo.isDraft) return " (D)";
     if (prInfo.state === "MERGED") return " (M)";
     if (prInfo.state === "CLOSED") return " (C)";
+    if (prInfo.reviewDecision === "APPROVED") return " (A)";
+    if (prInfo.reviewDecision === "CHANGES_REQUESTED") return " (CR)";
     if (prInfo.state === "OPEN" && prInfo.mergeStateStatus === "CLEAN")
         return " (✅)";
     if (prInfo.state === "OPEN") return " (O)";
     return "";
+}
+
+export function getPrBadgeColor(prInfo: PrInfo): BadgeColor {
+    if (prInfo.state === "MERGED") return "purple";
+    if (prInfo.state === "CLOSED") return "steel";
+    if (prInfo.reviewDecision === "APPROVED") return "green";
+    if (prInfo.reviewDecision === "CHANGES_REQUESTED") return "rose";
+    return "blue";
 }

@@ -958,12 +958,22 @@ export async function readStdin(): Promise<string> {
     return Buffer.concat(chunks).toString("utf-8");
 }
 
+// Claude Code allocates a narrow PTY (~80 cols) to subprocess commands in
+// recent versions; a fixed 50-char reserve leaves too little for badges.
+// This default keeps maxWidth >= MIN_CONTENT_WIDTH for all terminals while
+// still reserving up to MAX_RESERVED chars on wider ones.
+const MIN_CONTENT_WIDTH = 85;
+const MAX_RESERVED = 50;
+export function defaultFlexPadding(termWidth: number): number {
+    return Math.max(0, Math.min(MAX_RESERVED, termWidth - MIN_CONTENT_WIDTH));
+}
+
 export function calculateMaxWidth(
     termWidth: number,
     config: CcslConfig,
     contextPercent: number,
 ): number {
-    const padding = config.flexPadding ?? 50;
+    const padding = config.flexPadding ?? defaultFlexPadding(termWidth);
     switch (config.flexMode ?? "full-until-compact") {
         case "full":
             return termWidth - padding;

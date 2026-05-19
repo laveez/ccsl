@@ -196,8 +196,8 @@ badges.push(row("Instinct status",
 // ── Remote Control (optional) ──
 badges.push(section("Remote Control &nbsp;<span class=\"feature-tag\">features.remoteControl</span>"));
 badges.push(row("RC status",
-    badge("📱 RC", C.cyan),
-    badge("📱 local", C.steel),
+    badge("📱 ✓", C.cyan),
+    badge("📱 ✗", C.steel),
 ));
 
 // ── Transcript & Tools ──

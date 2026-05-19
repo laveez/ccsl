@@ -883,64 +883,100 @@ export function getLearningStatus(sessionStart: Date | undefined, transcriptPath
 // ============================================================================
 // Terminal Width
 // ============================================================================
+// Claude Code >= 2.1.139 spawns statusline subprocesses without a controlling
+// TTY, which makes `stty size < /dev/tty` fail with ENOTTY. We walk up
+// ancestor PIDs to find a shell process that owns the real PTY, then ask
+// stty to open that device directly with `-F` (GNU) or `-f` (BSD), which uses
+// O_NOCTTY and works even from a process without its own controlling terminal.
+
+// shell -> Claude Code -> node -> ccsl is ~4 levels; 8 leaves headroom for
+// multiplexers (tmux, screen) and nested shells.
+const MAX_ANCESTOR_DEPTH = 8;
+
+// Prefer the stty form that actually exists on each platform — saves a
+// guaranteed-to-fail subprocess spawn on the hot path.
+const STTY_FORMS: readonly string[] = process.platform === "linux"
+    ? ["-F", "-f"]
+    : ["-f", "-F"];
+
+function parsePositiveInteger(value: string): number | null {
+    const parsed = parseInt(value, 10);
+    if (isNaN(parsed) || parsed <= 0) return null;
+    return parsed;
+}
+
+interface ParentInfo {
+    ppid: number;
+    tty: string | null;
+}
+
+function getParentInfo(pid: number): ParentInfo | null {
+    try {
+        const out = execFileSync("ps", ["-o", "ppid=,tty=", "-p", String(pid)], {
+            encoding: "utf8",
+            stdio: ["pipe", "pipe", "ignore"],
+        }).trim();
+        if (!out) return null;
+        const [ppidRaw, ttyRaw = ""] = out.split(/\s+/);
+        const ppid = parsePositiveInteger(ppidRaw ?? "");
+        if (ppid === null) return null;
+        const tty = !ttyRaw || ttyRaw === "??" || ttyRaw === "?" ? null : ttyRaw;
+        return { ppid, tty };
+    } catch {
+        return null;
+    }
+}
+
+function getWidthForTTY(tty: string): number | null {
+    const devicePath = `/dev/${tty}`;
+    for (const flag of STTY_FORMS) {
+        try {
+            const out = execFileSync("stty", [flag, devicePath, "size"], {
+                encoding: "utf8",
+                stdio: ["pipe", "pipe", "ignore"],
+            }).trim();
+            const cols = parsePositiveInteger(out.split(/\s+/)[1] ?? "");
+            if (cols !== null) return cols;
+        } catch {
+            // try next form
+        }
+    }
+    // Last-ditch fallback for environments where neither -F nor -f exists.
+    // Needs a shell because we redirect from the device.
+    try {
+        const out = execSync(`stty size < ${devicePath}`, {
+            encoding: "utf8",
+            stdio: ["pipe", "pipe", "ignore"],
+            shell: "/bin/sh",
+        }).trim();
+        return parsePositiveInteger(out.split(/\s+/)[1] ?? "");
+    } catch {
+        return null;
+    }
+}
 
 export function getTerminalWidth(): number | null {
-    // Method 1: Query /dev/tty directly — most reliable after resize
-    try {
-        const width = execSync("stty size < /dev/tty 2>/dev/null | awk '{print $2}'", {
-            encoding: "utf8",
-            stdio: ["pipe", "pipe", "ignore"],
-            shell: "/bin/sh",
-        }).trim();
-
-        const parsed = parseInt(width, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-            return parsed;
-        }
-    } catch {
-        // /dev/tty not available (e.g., no controlling terminal)
+    // Explicit override for environments where probing fails (IDE
+    // integrations, nested shells, etc.). Set CCSL_WIDTH=200 in the
+    // statusLine command to bypass detection entirely.
+    const override = process.env.CCSL_WIDTH;
+    if (override) {
+        const parsed = parsePositiveInteger(override);
+        if (parsed !== null) return parsed;
     }
 
-    // Method 2: Find parent process TTY via ps
-    try {
-        const tty = execSync("ps -o tty= -p $(ps -o ppid= -p $$)", {
-            encoding: "utf8",
-            stdio: ["pipe", "pipe", "ignore"],
-            shell: "/bin/sh",
-        }).trim();
+    if (process.platform === "win32") return null;
 
-        if (tty && tty !== "??" && tty !== "?") {
-            const width = execSync(
-                `stty size < /dev/${tty} | awk '{print $2}'`,
-                {
-                    encoding: "utf8",
-                    stdio: ["pipe", "pipe", "ignore"],
-                    shell: "/bin/sh",
-                },
-            ).trim();
+    let pid = process.pid;
+    for (let depth = 0; depth < MAX_ANCESTOR_DEPTH; depth++) {
+        const info = getParentInfo(pid);
+        if (info === null) return null;
+        pid = info.ppid;
 
-            const parsed = parseInt(width, 10);
-            if (!isNaN(parsed) && parsed > 0) {
-                return parsed;
-            }
-        }
-    } catch {
-        // Command failed
-    }
+        if (info.tty === null) continue;
 
-    // Method 3: tput cols fallback
-    try {
-        const width = execSync("tput cols 2>/dev/null", {
-            encoding: "utf8",
-            stdio: ["pipe", "pipe", "ignore"],
-        }).trim();
-
-        const parsed = parseInt(width, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-            return parsed;
-        }
-    } catch {
-        // tput also failed
+        const width = getWidthForTTY(info.tty);
+        if (width !== null) return width;
     }
 
     return null;

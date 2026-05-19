@@ -471,29 +471,62 @@ function getKeychainBackoffPath(): string {
     return join(homedir(), ".claude", "plugins", "ccsl", ".keychain-backoff");
 }
 
-function getRcCachePath(): string {
-    return join(homedir(), ".claude", "plugins", "ccsl", ".rc-active");
+interface SessionFile {
+    pid?: number;
+    sessionId?: string;
+    updatedAt?: number;
+    bridgeSessionId?: string;
 }
 
-function readRcCache(): string | null {
+function isPidAlive(pid: number): boolean {
+    if (!pid || !Number.isInteger(pid) || pid <= 0) return false;
     try {
-        const p = getRcCachePath();
-        if (!existsSync(p)) return null;
-        return readFileSync(p, "utf8").trim();
-    } catch {
-        return null;
+        process.kill(pid, 0);
+        return true;
+    } catch (err) {
+        return (err as NodeJS.ErrnoException).code === "EPERM";
     }
 }
 
-function writeRcCache(transcriptPath: string): void {
+function deriveSessionIdFromTranscript(transcriptPath: string): string | undefined {
+    if (!transcriptPath) return undefined;
+    const base = transcriptPath.split("/").pop();
+    if (!base?.endsWith(".jsonl")) return undefined;
+    const candidate = base.slice(0, -".jsonl".length);
+    return /^[0-9a-f-]{36}$/i.test(candidate) ? candidate : undefined;
+}
+
+function findSessionFile(sessionId: string): SessionFile | null {
+    if (!sessionId) return null;
+    const dir = join(homedir(), ".claude", "sessions");
+    if (!existsSync(dir)) return null;
     try {
-        const p = getRcCachePath();
-        const dir = dirname(p);
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-        writeFileSync(p, transcriptPath, "utf8");
+        for (const name of readdirSync(dir)) {
+            if (!name.endsWith(".json")) continue;
+            try {
+                const parsed = JSON.parse(readFileSync(join(dir, name), "utf8")) as SessionFile;
+                if (parsed.sessionId === sessionId) return parsed;
+            } catch {
+                // Skip unreadable / malformed files
+            }
+        }
     } catch {
-        // Ignore write failures
+        // Directory listing failed
     }
+    return null;
+}
+
+function detectRemoteControl(
+    sessionFile: SessionFile | null,
+    transcriptHadBridge: boolean,
+): { active: boolean; url?: string } {
+    if (sessionFile?.bridgeSessionId && sessionFile.pid && isPidAlive(sessionFile.pid)) {
+        return { active: true, url: `https://claude.ai/code/${sessionFile.bridgeSessionId}` };
+    }
+    if (!sessionFile && transcriptHadBridge) {
+        return { active: true };
+    }
+    return { active: false };
 }
 
 function hydrateUsageDates(data: UsageData): UsageData {
@@ -1045,13 +1078,13 @@ export async function main() {
 
     const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);
 
-    // Persist RC detection across context compaction
     if (transcriptData && config.features.remoteControl) {
-        if (transcriptData.remoteControlActive) {
-            writeRcCache(input.transcript_path);
-        } else if (readRcCache() === input.transcript_path) {
-            transcriptData.remoteControlActive = true;
-        }
+        const sessionId = input.session_id ?? deriveSessionIdFromTranscript(input.transcript_path);
+        const sessionFile = sessionId ? findSessionFile(sessionId) : null;
+        const transcriptHadBridge = transcriptData.remoteControlActive === true;
+        const rc = detectRemoteControl(sessionFile, transcriptHadBridge);
+        transcriptData.remoteControlActive = rc.active;
+        transcriptData.remoteControlUrl = rc.url;
     }
 
     const prInfo = gitInfo ? await fetchPrInfo() : null;

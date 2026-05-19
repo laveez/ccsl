@@ -14,6 +14,7 @@ export interface StatuslineInput {
     workspace: { current_dir: string; project_dir: string; added_dirs?: string[] };
     version: string;
     transcript_path: string;
+    session_id?: string;
     session_name?: string;
     output_style?: { name: string };
     cost: {
@@ -87,6 +88,7 @@ export interface TranscriptData {
     todos: TodoItem[];
     sessionStart?: Date;
     remoteControlActive?: boolean;
+    remoteControlUrl?: string;
 }
 
 export interface GitFileStats {

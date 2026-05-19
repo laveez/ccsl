@@ -227,8 +227,9 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
     return badges;
 }
 
-function buildRemoteControlBadge(active: boolean): string[] {
-    return [badge(active ? "cyan" : "steel", `📱 ${active ? "RC" : "local"}`)];
+function buildRemoteControlBadge(active: boolean, url?: string): string[] {
+    const b = badge(active ? "cyan" : "steel", `📱 ${active ? "✓" : "✗"}`);
+    return [active && url ? `\x1b]8;;${url}\x07${b}\x1b]8;;\x07` : b];
 }
 
 function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
@@ -376,7 +377,7 @@ const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
     config: (data) => buildConfigBadges(data.configCounts, data.input.workspace.added_dirs),
     pr: (data) => buildPrBadges(data.prInfo),
     learning: (data, config) => config.features.learning ? buildLearningBadges(data.learningStatus) : [],
-    remoteControl: (data, config) => config.features.remoteControl ? buildRemoteControlBadge(data.transcriptData?.remoteControlActive === true) : [],
+    remoteControl: (data, config) => config.features.remoteControl ? buildRemoteControlBadge(data.transcriptData?.remoteControlActive === true, data.transcriptData?.remoteControlUrl) : [],
     transcript: (data) => [buildTranscriptBadge(data.input.transcript_path, data.input.session_name)],
     tools: (data) => data.transcriptData?.tools ? buildToolBadges(data.transcriptData.tools, data.input.workspace.current_dir) : [],
     agents: (data) => data.transcriptData?.agents?.length ? buildAgentBadges(data.transcriptData.agents, data.input.workspace.current_dir) : [],

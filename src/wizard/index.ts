@@ -2,11 +2,11 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-import type { BadgeGroup, CcslConfig, FlexMode, RowConfig } from "../types.js";
+import type { CcslConfig, FlexMode, RowConfig } from "../types.js";
 import { DEFAULT_ROWS, PRESET_DENSE, PRESET_SEMANTIC, PRESET_ADAPTIVE } from "../types.js";
 import { readStatuslineConfig } from "../render.js";
 import { enableRawMode, disableRawMode, showCursor, clearScreen } from "./terminal.js";
-import { selectPrompt, togglePrompt, numberPrompt, rowEditor } from "./prompts.js";
+import { selectPrompt, numberPrompt, rowEditor } from "./prompts.js";
 import { renderPreview } from "./preview.js";
 import { header, dim, sectionLabel } from "./ui.js";
 
@@ -80,33 +80,20 @@ export async function runWizard(): Promise<void> {
         );
         console.log();
 
-        // 5. Feature toggles
-        const features = await togglePrompt("Optional features", [
-            { key: "usage", label: "API usage rate limit bar", enabled: existing.features?.usage ?? false },
-            { key: "learning", label: "Learning loop status", enabled: existing.features?.learning ?? false },
-            { key: "remoteControl", label: "Remote control status", enabled: existing.features?.remoteControl ?? false },
-        ]);
-        console.log();
-
         // Build config
         const config: CcslConfig = {
             rows,
             flexMode,
             ...(flexMode === "full-until-compact" ? { compactThreshold } : {}),
             flexPadding,
-            features: {
-                usage: features.usage ?? false,
-                learning: features.learning ?? false,
-                remoteControl: features.remoteControl ?? false,
-            },
         };
 
-        // 6. Preview
+        // 5. Preview
         const termWidth = process.stdout.columns || 120;
         console.log(renderPreview(config, termWidth));
         console.log();
 
-        // 7. Confirm & save
+        // 6. Confirm & save
         const action = await selectPrompt<"save" | "discard">(
             "Save this configuration?",
             [

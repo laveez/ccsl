@@ -15,24 +15,24 @@ A rich, information-dense statusline for Claude Code.
 
 ---
 
-ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI badge display. It shows your model and plan, session duration, cost, context window usage, git status, file changes, PR links, active tools, sub-agents, task progress, and more — all rendered as compact badges with gradient backgrounds that shift color based on values.
+ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI badge display. It shows your model, reasoning effort, session duration, cost, context window usage, rate limits, git status, file changes, PR links, active tools, sub-agents, task progress, and more — all rendered as compact badges with gradient backgrounds that shift color based on values.
 
 ![Demo](docs/demo.gif)
 
 ### What's New
 
+**v0.4.0** — Stock Claude Code only: removed the custom learning-loop and Remote Control badges and the legacy usage-API polling (no network requests or credential access at all anymore — rate limits come natively from Claude Code). New badges for new Claude Code data: fast mode marker, reasoning effort (`💭 high`), agent sessions (`🤖`). PR badge now uses the native `pr` field (no `gh` subprocess on recent Claude Code), context percentage prefers the native value, and width detection uses the `COLUMNS` env var Claude Code sets since 2.1.153.
+
 **v0.3.0** — Native rate limits from Claude Code 2.1.80+ (no more API calls/keychain access), PR review decision badges with dynamic colors (green approved, rose changes requested, purple merged), `added_dirs` badge, session name in transcript badge.
 
 **v0.2.7** — Documentation and release housekeeping.
-
-**v0.2.5** — 7-day usage badge with gradient coloring, usage API rate limit resilience with stale `~` fallback, last-known-good cache across API failures.
 
 See all changes in [Releases](https://github.com/laveez/ccsl/releases).
 
 ### Contents
 
 - [Layouts](#layouts) · [Badge Reference](#badge-reference) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Width Modes](#width-modes)
-- [How It Works](#how-it-works) · [Privacy](#privacy) · [See Also](#see-also) · [Contributing](#contributing)
+- [How It Works](#how-it-works) · [Privacy](#privacy) · [Contributing](#contributing)
 
 ---
 
@@ -50,25 +50,23 @@ Every badge the statusline can show, with all possible states:
 
 | Badge | Description | States |
 |---|---|---|
-| **Model / Plan** | Current Claude model and subscription plan | `Opus`, `Sonnet \| Pro`, `Opus \| Max` |
+| **Model / Fast mode** | Current Claude model, with a marker when [fast mode](https://code.claude.com/docs/en/fast-mode) is on | `Opus`, `Sonnet`, `Fable \| fast` |
+| **Reasoning effort** | Current effort level, color-coded (steel → blue → gold → orange → rose). Shows `off` when extended thinking is disabled | `💭 low`, `💭 medium`, `💭 high`, `💭 xhigh`, `💭 max`, `💭 off` |
+| **Agent session** | Agent name when running with `--agent` | `🤖 security-reviewer` |
 | **Duration** | Session wall-clock time. Background shifts green → gold → purple | `30s`, `12m`, `1h 30m`, `3h` |
 | **Cost** | Cumulative API cost. Background shifts green → gold → orange → red | `$0.42`, `$4.82`, `$50`, `$123` |
 | **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
 | **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
-| **Usage (5h)** | 5-hour API utilization bar with reset timer. `~` prefix means stale (API temporarily unavailable) | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red. Stale: `⚡ ~42%` |
-| **Usage (7d)** | 7-day rolling utilization | `7d 26%`, stale: `7d ~26%` |
+| **Usage (5h)** | 5-hour rate limit bar with reset timer, from Claude Code's native rate limit data | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red |
+| **Usage (7d)** | 7-day rolling rate limit | `7d 26%` |
 | **Repo name** | Git repository name | `ccsl`, `my-project` |
 | **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
 | **File stats** | Dirty file counts: modified (!), added (+), deleted (✘), untracked (?) | `!3`, `!1+2?4`, `!5+3✘1?2` |
 | **Ahead / Behind** | Commits ahead/behind remote tracking branch | `↑3`, `↓2`, `↑5↓1` |
 | **Lines changed** | Total lines added (green) and removed (red) in session | `📊 +284-67` |
 | **Config summary** | Counts of CLAUDE.md files, MCP servers, and hooks | `📋 2 CLAUDE.md \| 5 MCPs \| 3 hooks` |
-| **Ticket marker** | Jira-style ticket ID extracted from PR title | `🎫 PROJ-123` |
-| **PR link** | Clickable PR with status: Draft, Open, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(✅)`, `(M)`, `(C)` |
-| **Recall status** | Whether `/recall` was run this session | `🧩 ✓` (recalled), `🧩 ✗` (not recalled) |
-| **Learn status** | Compact relative time since last `/learn`, plus unprocessed observation count or ✓ | `📚 15m ✓` (recent, all processed), `📚 3d 1418` (3 days ago, 1418 pending), `📚 ⚠ 500` (pending) |
-| **Instinct status** | Active instinct count with promotion/correction indicators | `🧬 21` (normal), `🧬 21 ▲3` (3 promotable), `🧬 21 !` (corrections detected) |
-| **Remote Control** | Claude Code [Remote Control](https://code.claude.com/docs/en/remote-control) status; badge is Cmd-clickable to open the session on claude.ai | `📱 ✓` (connected), `📱 ✗` (local-only) |
+| **Ticket marker** | Jira-style ticket ID extracted from PR title (gh fallback path only) | `🎫 PROJ-123` |
+| **PR link** | Clickable PR with status: Draft, Open, Approved, Changes requested, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(A)`, `(CR)`, `(✅)`, `(M)`, `(C)` |
 | **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
 | **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
@@ -76,8 +74,6 @@ Every badge the statusline can show, with all possible states:
 | **Running agent** | Active Task subagent with elapsed time | `◐ feature Review auth… (2m 30s)` |
 | **Completed agents** | Recent finished agents (max 2) with duration | `✓ feature Review auth… 2m` |
 | **Tasks** | Current task from TodoWrite with progress | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
-
-> **Note:** Badges marked with `features.*` in the reference image require the corresponding feature toggle in config.
 
 ---
 
@@ -116,7 +112,7 @@ The easiest way to configure ccsl is the interactive wizard:
 ccsl setup
 ```
 
-This walks you through preset selection, row composition, flex settings, and feature toggles — with a live preview of your statusline before saving.
+This walks you through preset selection, row composition, and flex settings — with a live preview of your statusline before saving.
 
 ### Config File
 
@@ -125,7 +121,7 @@ Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array 
 ```json
 {
   "rows": [
-    ["identity", "learning", "remoteControl"],
+    ["identity"],
     ["context", "usage", "config"],
     ["git", "pr"],
     "---",
@@ -135,12 +131,7 @@ Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array 
   ],
   "flexMode": "full-until-compact",
   "compactThreshold": 85,
-  "flexPadding": 50,
-  "features": {
-    "usage": false,
-    "learning": false,
-    "remoteControl": false
-  }
+  "flexPadding": 50
 }
 ```
 
@@ -150,14 +141,12 @@ Each row is an array of badge group IDs. Use `"---"` for a separator line. Rows 
 
 | ID | Badges |
 |---|---|
-| `identity` | Model/plan, duration, cost |
+| `identity` | Model/fast mode, effort, agent, duration, cost |
 | `context` | Context bar, token breakdown |
-| `usage` | API rate limit bar |
+| `usage` | Rate limit bars (5h / 7d) |
 | `git` | Repo, branch, file stats, ahead/behind, lines |
 | `config` | CLAUDE.md count, MCPs, hooks |
 | `pr` | Ticket marker, PR link |
-| `learning` | Recall, learn, instinct |
-| `remoteControl` | Remote control status |
 | `transcript` | Session transcript link |
 | `tools` | Running/completed tools, MCP tools |
 | `agents` | Running/completed agents |
@@ -180,15 +169,7 @@ Three preset starting points (available via `ccsl setup`):
 | `compactThreshold` | Context % that triggers compact width in `full-until-compact` mode (1–99) | `85` |
 | `flexPadding` | Chars reserved for right-side notifications (all modes) | `50` |
 
-> **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets.
-
-### Feature Toggles
-
-| Option | Description | Default |
-|---|---|---|
-| `features.usage` | Show Anthropic API usage rate limit bar (see [privacy note](#privacy)) | `false` |
-| `features.learning` | Show recall/learn/instinct status badges (for custom learning loop integration) | `false` |
-| `features.remoteControl` | Show Claude Code [Remote Control](https://code.claude.com/docs/en/remote-control) status badge | `false` |
+> **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets. A leftover `features` object from pre-0.4.0 configs is ignored; badge visibility is controlled entirely by `rows` now (drop `usage` from your rows to hide the rate limit bars).
 
 ### Width Modes
 
@@ -213,36 +194,25 @@ flowchart TD
     C --> D[Git info]
     C --> E[Transcript]
     C --> F[Config counts]
-    C --> G[Usage API*]
     D --> H[Render badges]
     E --> H
     F --> H
-    G --> H
     H --> I[stdout ANSI]
 
     style A fill:#2d4a2d
     style C fill:#38608c
     style I fill:#2d4a2d
-    style G fill:#5f3a1c
 ```
 
-ccsl is a [StatusLine command](https://code.claude.com/docs/en/settings) — Claude Code pipes a JSON object to stdin on every status update. ccsl gathers additional context (git state, transcript history, config files, optionally the usage API), renders everything as ANSI-colored badges, and writes the result to stdout.
-
-\* Usage API is optional and requires `features.usage: true` in config.
+ccsl is a [StatusLine command](https://code.claude.com/docs/en/statusline) — Claude Code pipes a JSON object to stdin on every status update (model, cost, context window, rate limits, PR info, and more). ccsl gathers additional context (git state, transcript history, config files), renders everything as ANSI-colored badges, and writes the result to stdout.
 
 ---
 
 ## Privacy
 
-When `features.usage` is **disabled** (the default), ccsl reads only local files (git state, transcript, config). No network requests are made and no credentials are accessed.
-
-When `features.usage` is **enabled**, ccsl reads your Claude OAuth token from `~/.claude/.credentials.json` (or macOS Keychain) to query the Anthropic usage API. The token is used solely for this request and is never stored, logged, or transmitted elsewhere. Responses are cached locally for 3 minutes to minimize API calls. If the API is temporarily unavailable (e.g., rate-limited), the last successful value is shown with a `~` stale marker and retries are backed off to every 5 minutes.
+ccsl makes no network requests and accesses no credentials. Everything is rendered from the JSON Claude Code pipes in and from local files (git state, transcript, config). The only subprocess calls are `git` (always) and `gh pr view` (only on older Claude Code versions that don't supply PR data natively).
 
 ---
-
-## See Also
-
-- **[Remote Control](https://code.claude.com/docs/en/remote-control)** — Claude Code's built-in feature for continuing local sessions from your phone, tablet, or browser. When enabled, ccsl shows the RC connection status as a Cmd-clickable badge that opens the session on claude.ai (enable with `features.remoteControl: true`).
 
 ## Acknowledgments
 

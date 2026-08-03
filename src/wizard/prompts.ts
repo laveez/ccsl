@@ -152,14 +152,12 @@ export async function numberPrompt(
 }
 
 const BADGE_DESCRIPTIONS: Record<BadgeGroup, string> = {
-    identity: "Model, duration, cost",
+    identity: "Model, effort, agent, duration, cost",
     context: "Context bar, token breakdown",
-    usage: "API rate limit bar",
+    usage: "Rate limit bars (5h / 7d)",
     git: "Repo, branch, file stats",
     config: "CLAUDE.md, MCPs, hooks",
     pr: "Ticket marker, PR link",
-    learning: "Recall, learn, instinct",
-    remoteControl: "Remote control status",
     transcript: "Session transcript link",
     tools: "Running/completed tools",
     agents: "Running/completed agents",

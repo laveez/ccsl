@@ -11,7 +11,6 @@ import type {
     AgentEntry,
     TodoItem,
     UsageData,
-    LearningStatus,
     UnifiedStatuslineData,
     BadgeColor,
     BadgeGroup,
@@ -49,10 +48,9 @@ import {
     getModelName,
     getCost,
     getDuration,
-    getContextWindowSize,
     getCurrentUsage,
     calculateCurrentTokens,
-    calculatePercentUsed,
+    getPercentUsed,
 } from "./utils.js";
 
 export function renderContextBar(percent: number, width: number = 10): string {
@@ -113,11 +111,23 @@ export function renderUsageBar(percent: number | null, width: number = 10): stri
 // Badge Builders
 // ============================================================================
 
-function buildIdentityBadges(input: StatuslineInput, usageData: UsageData | null, duration: number): string[] {
+const EFFORT_COLORS: Record<string, BadgeColor> = {
+    low: "steel", medium: "blue", high: "gold", xhigh: "orange", max: "rose",
+};
+
+function buildIdentityBadges(input: StatuslineInput, duration: number): string[] {
     const badges: string[] = [];
     const modelName = getModelName(input);
-    const modelPlan = usageData?.planName ? `${modelName} | ${usageData.planName}` : modelName;
-    badges.push(badge("blue", modelPlan));
+    badges.push(badge("blue", input.fast_mode ? `${modelName} | fast` : modelName));
+    if (input.effort?.level) {
+        badges.push(badge(EFFORT_COLORS[input.effort.level] ?? "steel", `💭 ${input.effort.level}`));
+    } else if (input.thinking && !input.thinking.enabled) {
+        badges.push(badge("steel", "💭 off"));
+    }
+    if (input.agent?.name) {
+        const agentName = input.agent.name.length > 20 ? input.agent.name.slice(0, 19) + "…" : input.agent.name;
+        badges.push(badge("purple", `🤖 ${agentName}`));
+    }
     const durationMin = duration / 60000;
     const durBg = gradientColor([
         [0, BADGE.green], [60, BADGE.gold], [180, BADGE.purple],
@@ -134,10 +144,9 @@ function buildIdentityBadges(input: StatuslineInput, usageData: UsageData | null
 
 function buildContextBadges(input: StatuslineInput): string[] {
     const badges: string[] = [];
-    const contextSize = getContextWindowSize(input);
     const usage = getCurrentUsage(input);
     const currentTokens = calculateCurrentTokens(usage);
-    const percentUsed = calculatePercentUsed(currentTokens, contextSize);
+    const percentUsed = getPercentUsed(input);
     const tokensK = Math.floor(currentTokens / 1000);
     const barText = ` ${tokensK}k=${percentUsed}% `;
     const inlineBar = renderBarWithText(percentUsed, barText);
@@ -153,11 +162,10 @@ function buildContextBadges(input: StatuslineInput): string[] {
 
 function buildUsageBadges(usageData: UsageData | null): string[] {
     if (!usageData || usageData.fiveHour === null) return [];
-    const staleMarker = usageData.stale ? "~" : "";
     const fiveHour = Math.round(usageData.fiveHour);
     const resetTime = formatTimeUntil(usageData.fiveHourResetAt);
-    const resetStr = resetTime ? ` (${staleMarker}${resetTime} / 5h)` : "";
-    const barText = ` ${staleMarker}${fiveHour}%${resetStr} `;
+    const resetStr = resetTime ? ` (${resetTime} / 5h)` : "";
+    const barText = ` ${fiveHour}%${resetStr} `;
     const inlineBar = renderBarWithText(fiveHour, barText);
     const badges = [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
     if (usageData.sevenDay !== null) {
@@ -165,7 +173,7 @@ function buildUsageBadges(usageData: UsageData | null): string[] {
         const bg7d = gradientColor([
             [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
         ], sevenDay);
-        badges.push(badgeGradient(bg7d, `7d ${staleMarker}${sevenDay}%`));
+        badges.push(badgeGradient(bg7d, `7d ${sevenDay}%`));
     }
     return badges;
 }
@@ -224,56 +232,6 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
     const prText = `🔗 PR#${prInfo.number}${statusSuffix}`;
     const prBadge = badge(color, prText);
     badges.push(`\x1b]8;;${prInfo.url}\x07${prBadge}\x1b]8;;\x07`);
-    return badges;
-}
-
-function buildRemoteControlBadge(active: boolean, url?: string): string[] {
-    const b = badge(active ? "cyan" : "steel", `📱 ${active ? "✓" : "✗"}`);
-    return [active && url ? `\x1b]8;;${url}\x07${b}\x1b]8;;\x07` : b];
-}
-
-function buildLearningBadges(learningStatus: LearningStatus | null): string[] {
-    if (!learningStatus) return [];
-    const badges: string[] = [];
-
-    if (learningStatus.recalledThisSession) {
-        badges.push(badge("green", "🧩 ✓"));
-    } else {
-        badges.push(badge("steel", "🧩 ✗"));
-    }
-
-    const obsCount = learningStatus.instinctStatus?.unprocessedObservations ?? 0;
-    const obsSuffix = obsCount > 0 ? ` ${obsCount}` : " ✓";
-
-    if (learningStatus.learningPending) {
-        badges.push(badge("rose", `📚 ⚠${obsSuffix}`));
-    } else if (learningStatus.lastLearnedDate) {
-        badges.push(badge(obsCount > 0 ? "gold" : "green", `📚 ${learningStatus.lastLearnedDate}${obsSuffix}`));
-    } else {
-        badges.push(badge("steel", `📚${obsSuffix}`));
-    }
-
-    if (learningStatus.compactionCount > 0) {
-        const count = learningStatus.compactionCount;
-        const color: BadgeColor = count >= 3 ? "orange" : "gold";
-        badges.push(badge(color, `📦 ${count}`));
-    }
-
-    const inst = learningStatus.instinctStatus;
-    if (inst) {
-        let text = `🧬 ${inst.activeCount}`;
-        let color: BadgeColor = "steel";
-        if (inst.promotableCount > 0) {
-            text += ` ▲${inst.promotableCount}`;
-            color = "gold";
-        }
-        if (inst.correctionsThisSession > 0) {
-            text += " !";
-            color = "rose";
-        }
-        badges.push(badge(color, text));
-    }
-
     return badges;
 }
 
@@ -367,17 +325,15 @@ function buildTodoBadges(todos: TodoItem[]): string[] {
 // Row-based Layout Engine
 // ============================================================================
 
-type BadgeGroupBuilder = (data: UnifiedStatuslineData, config: CcslConfig) => string[];
+type BadgeGroupBuilder = (data: UnifiedStatuslineData) => string[];
 
 const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
-    identity: (data) => buildIdentityBadges(data.input, data.usageData, getDuration(data.input)),
+    identity: (data) => buildIdentityBadges(data.input, getDuration(data.input)),
     context: (data) => buildContextBadges(data.input),
-    usage: (data, config) => config.features.usage ? buildUsageBadges(data.usageData) : [],
+    usage: (data) => buildUsageBadges(data.usageData),
     git: (data) => buildGitBadges(data.gitInfo, data.input),
     config: (data) => buildConfigBadges(data.configCounts, data.input.workspace.added_dirs),
     pr: (data) => buildPrBadges(data.prInfo),
-    learning: (data, config) => config.features.learning ? buildLearningBadges(data.learningStatus) : [],
-    remoteControl: (data, config) => config.features.remoteControl ? buildRemoteControlBadge(data.transcriptData?.remoteControlActive === true, data.transcriptData?.remoteControlUrl) : [],
     transcript: (data) => [buildTranscriptBadge(data.input.transcript_path, data.input.session_name)],
     tools: (data) => data.transcriptData?.tools ? buildToolBadges(data.transcriptData.tools, data.input.workspace.current_dir) : [],
     agents: (data) => data.transcriptData?.agents?.length ? buildAgentBadges(data.transcriptData.agents, data.input.workspace.current_dir) : [],
@@ -397,7 +353,7 @@ function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: C
         const badges: string[] = [];
         for (const group of row) {
             const builder = badgeGroupBuilders[group];
-            if (builder) badges.push(...builder(data, config));
+            if (builder) badges.push(...builder(data));
         }
         if (badges.length > 0) {
             const sep = resolveSeparator(config.badgeStyle);
@@ -443,7 +399,7 @@ export function readStatuslineConfig(): CcslConfig {
     try {
         const configPath = join(homedir(), ".claude", "statusline-config.json");
         if (!existsSync(configPath)) {
-            return { rows: DEFAULT_ROWS, features: { usage: false, learning: false, remoteControl: false } };
+            return { rows: DEFAULT_ROWS };
         }
         const content = readFileSync(configPath, "utf8");
         const config = JSON.parse(content);
@@ -451,7 +407,6 @@ export function readStatuslineConfig(): CcslConfig {
         const validLayout = (layout === "semantic" || layout === "dense" || layout === "adaptive")
             ? layout
             : "dense";
-        const features = config.features ?? {};
         const flexMode = config.flexMode;
         const validFlexMode = (flexMode === "full" || flexMode === "full-minus-40" || flexMode === "full-until-compact")
             ? flexMode
@@ -465,14 +420,9 @@ export function readStatuslineConfig(): CcslConfig {
             flexPadding: typeof config.flexPadding === "number" ? config.flexPadding : undefined,
             badgeSpacing: config.badgeSpacing !== false,
             badgeStyle: typeof config.badgeStyle === "string" ? config.badgeStyle : undefined,
-            features: {
-                usage: features.usage === true,
-                learning: features.learning === true,
-                remoteControl: features.remoteControl === true,
-            },
         };
     } catch { /* ignore */ }
-    return { rows: DEFAULT_ROWS, features: { usage: false, learning: false, remoteControl: false } };
+    return { rows: DEFAULT_ROWS };
 }
 
 export function buildStatuslineOutput(

@@ -1,6 +1,6 @@
 {
   "name": "ccsl",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A rich, information-dense statusline for Claude Code",
   "type": "module",
   "main": "dist/statusline.js",
@@ -12,7 +12,7 @@
     "ccsl": "dist/bin/ccsl.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').chmodSync('dist/bin/ccsl.js', 0o755)\"",
     "dev": "tsc --watch",
     "demo": "node scripts/generate-demo.mjs",
     "prepublishOnly": "npm run build"
@@ -44,7 +44,7 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@types/node": "^25.6.1",
-    "typescript": "^6.0.3"
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
   }
 }

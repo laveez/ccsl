@@ -440,13 +440,10 @@ export const EMOJI_REPLACEMENTS: [RegExp, string][] = [
     [/\ud83d\udccb/g, "cfg"],     // 📋
     [/\ud83c\udfab/g, "tkt"],     // 🎫
     [/\ud83d\udd17/g, "PR"],      // 🔗
-    [/\ud83e\udde9/g, "R"],       // 🧩
-    [/\ud83d\udcda/g, "L"],       // 📚
-    [/\ud83d\udce6/g, "C"],       // 📦
-    [/\ud83e\uddec/g, "I"],       // 🧬
+    [/\ud83d\udcad/g, "eff"],     // 💭
+    [/\ud83e\udd16/g, "agent"],   // 🤖
     [/\ud83d\udcdd/g, "log"],     // 📝
     [/\ud83d\udd0c/g, "mcp:"],   // 🔌
-    [/\ud83d\udcf1/g, "TG"],     // 📱
 ];
 
 export function stripEmojis(text: string): string {
@@ -532,6 +529,19 @@ export function calculatePercentUsed(
 ): number {
     if (contextSize === 0) return 0;
     return Math.floor((currentTokens * 100) / contextSize);
+}
+
+// Prefer the pre-calculated percentage Claude Code supplies natively; fall
+// back to computing it from current_usage on older versions.
+export function getPercentUsed(input: StatuslineInput): number {
+    const native = input.context_window.used_percentage;
+    if (native != null && Number.isFinite(native)) {
+        return Math.floor(native);
+    }
+    return calculatePercentUsed(
+        calculateCurrentTokens(getCurrentUsage(input)),
+        getContextWindowSize(input),
+    );
 }
 
 export function extractTicketMarker(title: string): string | null {

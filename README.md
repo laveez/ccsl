@@ -21,7 +21,7 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ### What's New
 
-**v0.4.0** — Stock Claude Code only: removed the custom learning-loop and Remote Control badges and the legacy usage-API polling (no network requests or credential access at all anymore — rate limits come natively from Claude Code). New badges for new Claude Code data: fast mode marker, reasoning effort (`💭 high`), agent sessions (`🤖`). PR badge now uses the native `pr` field (no `gh` subprocess on recent Claude Code), context percentage prefers the native value, and width detection uses the `COLUMNS` env var Claude Code sets since 2.1.153.
+**v0.4.0** — Stock Claude Code only: removed the custom learning-loop and Remote Control badges and the legacy usage-API polling (no network requests or credential access at all anymore — rate limits come natively from Claude Code). New badges for new Claude Code data: fast mode marker, reasoning effort (`💭 high`), agent sessions (`🤖`). PR badge now uses the native `pr` field (no `gh` subprocess on recent Claude Code), context percentage prefers the native value, and width detection uses the `COLUMNS` env var Claude Code sets since 2.1.153. The 5h usage bar now sits on the header row, with the 7d badge as its own `usage7d` group.
 
 **v0.3.0** — Native rate limits from Claude Code 2.1.80+ (no more API calls/keychain access), PR review decision badges with dynamic colors (green approved, rose changes requested, purple merged), `added_dirs` badge, session name in transcript badge.
 
@@ -121,8 +121,8 @@ Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array 
 ```json
 {
   "rows": [
-    ["identity"],
-    ["context", "usage", "config"],
+    ["identity", "usage"],
+    ["context", "usage7d", "config"],
     ["git", "pr"],
     "---",
     ["transcript", "tools"],
@@ -143,7 +143,8 @@ Each row is an array of badge group IDs. Use `"---"` for a separator line. Rows 
 |---|---|
 | `identity` | Model/fast mode, effort, agent, duration, cost |
 | `context` | Context bar, token breakdown |
-| `usage` | Rate limit bars (5h / 7d) |
+| `usage` | 5-hour rate limit bar |
+| `usage7d` | 7-day rate limit badge |
 | `git` | Repo, branch, file stats, ahead/behind, lines |
 | `config` | CLAUDE.md count, MCPs, hooks |
 | `pr` | Ticket marker, PR link |

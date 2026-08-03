@@ -154,7 +154,8 @@ export async function numberPrompt(
 const BADGE_DESCRIPTIONS: Record<BadgeGroup, string> = {
     identity: "Model, effort, agent, duration, cost",
     context: "Context bar, token breakdown",
-    usage: "Rate limit bars (5h / 7d)",
+    usage: "5h rate limit bar",
+    usage7d: "7d rate limit badge",
     git: "Repo, branch, file stats",
     config: "CLAUDE.md, MCPs, hooks",
     pr: "Ticket marker, PR link",

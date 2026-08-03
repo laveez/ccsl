@@ -1,12 +1,10 @@
 import { execFile, execSync, execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync, mkdirSync, createReadStream } from "node:fs";
+import { existsSync, readFileSync, createReadStream } from "node:fs";
 import { promisify } from "node:util";
 import process from "node:process";
 import * as readline from "node:readline";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { homedir, platform } from "node:os";
-import * as https from "node:https";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 import type {
     StatuslineInput,
@@ -17,8 +15,6 @@ import type {
     AgentEntry,
     TodoItem,
     UnifiedStatuslineData,
-    LearningStatus,
-    InstinctStatus,
     ConfigCounts,
     UsageData,
     CcslConfig,
@@ -29,16 +25,11 @@ import {
     extractRepoName,
     extractRepoNameFromCommonDir,
     getProjectDir,
-    calculatePercentUsed,
-    calculateCurrentTokens,
-    getCurrentUsage,
-    getContextWindowSize,
+    getPercentUsed,
 } from "./utils.js";
 import { buildStatuslineOutput, readStatuslineConfig } from "./render.js";
 
 const execFileP = promisify(execFile);
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const PKG_VERSION: string = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf8")).version;
 
 // ============================================================================
 // Git Functions
@@ -158,6 +149,28 @@ export async function fetchGitRepoInfo(projectDir: string): Promise<GitRepoInfo 
     }
 }
 
+// ============================================================================
+// PR Info
+// ============================================================================
+
+// Claude Code supplies PR data natively in the statusline input on recent
+// versions — no gh subprocess needed. The native object is absent when there
+// is no PR or it is merged/closed.
+export function prInfoFromInput(input: StatuslineInput): PrInfo | null {
+    if (!input.pr) return null;
+    const { number, url, review_state } = input.pr;
+    return {
+        url,
+        number: String(number),
+        isDraft: review_state === "draft",
+        state: "OPEN",
+        reviewDecision: review_state === "approved"
+            ? "APPROVED"
+            : review_state === "changes_requested" ? "CHANGES_REQUESTED" : undefined,
+    };
+}
+
+// Fallback for Claude Code versions without the native pr field.
 export async function fetchPrInfo(): Promise<PrInfo | null> {
     try {
         const { stdout } = await execFileP(
@@ -184,8 +197,6 @@ export async function fetchPrInfo(): Promise<PrInfo | null> {
 
 interface TranscriptLine {
     timestamp?: string;
-    type?: string;
-    subtype?: string;
     message?: {
         content?: ContentBlock[];
     };
@@ -247,14 +258,6 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
             try {
                 const entry = JSON.parse(line) as TranscriptLine;
                 const timestamp = entry.timestamp ? new Date(entry.timestamp) : new Date();
-
-                if (!result.sessionStart && entry.timestamp) {
-                    result.sessionStart = timestamp;
-                }
-
-                if (entry.type === "system" && entry.subtype === "bridge_status") {
-                    result.remoteControlActive = true;
-                }
 
                 const content = entry.message?.content;
                 if (!content || !Array.isArray(content)) continue;
@@ -435,314 +438,11 @@ export function countConfigs(cwd?: string): ConfigCounts {
 }
 
 // ============================================================================
-// Usage API
+// Rate Limits (native from Claude Code 2.1.80+)
 // ============================================================================
 
-const USAGE_CACHE_TTL_MS = 180_000;
-const USAGE_CACHE_FAILURE_TTL_MS = 300_000;
-const KEYCHAIN_TIMEOUT_MS = 5000;
-const KEYCHAIN_BACKOFF_MS = 60_000;
-
-interface CredentialsFile {
-    claudeAiOauth?: {
-        accessToken?: string;
-        subscriptionType?: string;
-        expiresAt?: number;
-    };
-}
-
-interface UsageApiResponse {
-    five_hour?: { utilization?: number; resets_at?: string };
-    seven_day?: { utilization?: number; resets_at?: string };
-}
-
-interface UsageCacheFile {
-    data: UsageData;
-    timestamp: number;
-    lastGood?: UsageData;
-    lastGoodTimestamp?: number;
-}
-
-function getUsageCachePath(): string {
-    return join(homedir(), ".claude", "plugins", "ccsl", ".usage-cache.json");
-}
-
-function getKeychainBackoffPath(): string {
-    return join(homedir(), ".claude", "plugins", "ccsl", ".keychain-backoff");
-}
-
-interface SessionFile {
-    pid?: number;
-    sessionId?: string;
-    updatedAt?: number;
-    bridgeSessionId?: string;
-}
-
-function isPidAlive(pid: number): boolean {
-    if (!pid || !Number.isInteger(pid) || pid <= 0) return false;
-    try {
-        process.kill(pid, 0);
-        return true;
-    } catch (err) {
-        return (err as NodeJS.ErrnoException).code === "EPERM";
-    }
-}
-
-function deriveSessionIdFromTranscript(transcriptPath: string): string | undefined {
-    if (!transcriptPath) return undefined;
-    const base = transcriptPath.split("/").pop();
-    if (!base?.endsWith(".jsonl")) return undefined;
-    const candidate = base.slice(0, -".jsonl".length);
-    return /^[0-9a-f-]{36}$/i.test(candidate) ? candidate : undefined;
-}
-
-function findSessionFile(sessionId: string): SessionFile | null {
-    if (!sessionId) return null;
-    const dir = join(homedir(), ".claude", "sessions");
-    if (!existsSync(dir)) return null;
-    try {
-        for (const name of readdirSync(dir)) {
-            if (!name.endsWith(".json")) continue;
-            try {
-                const parsed = JSON.parse(readFileSync(join(dir, name), "utf8")) as SessionFile;
-                if (parsed.sessionId === sessionId) return parsed;
-            } catch {
-                // Skip unreadable / malformed files
-            }
-        }
-    } catch {
-        // Directory listing failed
-    }
-    return null;
-}
-
-function detectRemoteControl(
-    sessionFile: SessionFile | null,
-    transcriptHadBridge: boolean,
-): { active: boolean; url?: string } {
-    if (sessionFile?.bridgeSessionId && sessionFile.pid && isPidAlive(sessionFile.pid)) {
-        return { active: true, url: `https://claude.ai/code/${sessionFile.bridgeSessionId}` };
-    }
-    if (!sessionFile && transcriptHadBridge) {
-        return { active: true };
-    }
-    return { active: false };
-}
-
-function hydrateUsageDates(data: UsageData): UsageData {
-    if (data.fiveHourResetAt) {
-        data.fiveHourResetAt = new Date(data.fiveHourResetAt);
-    }
-    if (data.sevenDayResetAt) {
-        data.sevenDayResetAt = new Date(data.sevenDayResetAt);
-    }
-    return data;
-}
-
-function readUsageCache(now: number): UsageData | null {
-    try {
-        const cachePath = getUsageCachePath();
-        if (!existsSync(cachePath)) return null;
-
-        const content = readFileSync(cachePath, "utf8");
-        const cache: UsageCacheFile = JSON.parse(content);
-
-        const ttl = cache.data.apiUnavailable ? USAGE_CACHE_FAILURE_TTL_MS : USAGE_CACHE_TTL_MS;
-        if (now - cache.timestamp < ttl) {
-            // Cache entry is fresh — but if it's a failure entry, return stale last-known-good instead
-            if (cache.data.apiUnavailable && cache.lastGood) {
-                return hydrateUsageDates({ ...cache.lastGood, stale: true });
-            }
-            return hydrateUsageDates(cache.data);
-        }
-
-        // Cache expired — if we have last-known-good data, return it as stale
-        // (caller will attempt a fresh fetch)
-        return null;
-    } catch {
-        return null;
-    }
-}
-
-function writeUsageCache(data: UsageData, timestamp: number): void {
-    try {
-        const cachePath = getUsageCachePath();
-        const cacheDir = dirname(cachePath);
-
-        if (!existsSync(cacheDir)) {
-            mkdirSync(cacheDir, { recursive: true });
-        }
-
-        const cache: UsageCacheFile = { data, timestamp };
-
-        // Preserve last-known-good data across failures
-        if (data.apiUnavailable) {
-            try {
-                const existing = existsSync(cachePath)
-                    ? JSON.parse(readFileSync(cachePath, "utf8")) as UsageCacheFile
-                    : null;
-                if (existing?.lastGood) {
-                    cache.lastGood = existing.lastGood;
-                    cache.lastGoodTimestamp = existing.lastGoodTimestamp;
-                } else if (existing?.data && !existing.data.apiUnavailable) {
-                    cache.lastGood = existing.data;
-                    cache.lastGoodTimestamp = existing.timestamp;
-                }
-            } catch { /* ignore */ }
-        } else {
-            cache.lastGood = data;
-            cache.lastGoodTimestamp = timestamp;
-        }
-
-        writeFileSync(cachePath, JSON.stringify(cache), "utf8");
-    } catch {
-        // Ignore cache write failures
-    }
-}
-
-function isKeychainBackoff(now: number): boolean {
-    try {
-        const backoffPath = getKeychainBackoffPath();
-        if (!existsSync(backoffPath)) return false;
-        const timestamp = parseInt(readFileSync(backoffPath, "utf8"), 10);
-        return now - timestamp < KEYCHAIN_BACKOFF_MS;
-    } catch {
-        return false;
-    }
-}
-
-function recordKeychainFailure(now: number): void {
-    try {
-        const backoffPath = getKeychainBackoffPath();
-        const dir = dirname(backoffPath);
-        if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true });
-        }
-        writeFileSync(backoffPath, String(now), "utf8");
-    } catch {
-        // Ignore write failures
-    }
-}
-
-function readKeychainCredentials(now: number): { accessToken: string; subscriptionType: string } | null {
-    if (platform() !== "darwin") return null;
-    if (isKeychainBackoff(now)) return null;
-
-    try {
-        const keychainData = execFileSync(
-            "/usr/bin/security",
-            ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
-            { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"], timeout: KEYCHAIN_TIMEOUT_MS }
-        ).trim();
-
-        if (!keychainData) return null;
-
-        const data: CredentialsFile = JSON.parse(keychainData);
-        return parseCredentialsData(data, now);
-    } catch {
-        recordKeychainFailure(now);
-        return null;
-    }
-}
-
-function readFileCredentials(now: number): { accessToken: string; subscriptionType: string } | null {
-    const credentialsPath = join(homedir(), ".claude", ".credentials.json");
-    if (!existsSync(credentialsPath)) return null;
-
-    try {
-        const content = readFileSync(credentialsPath, "utf8");
-        const data: CredentialsFile = JSON.parse(content);
-        return parseCredentialsData(data, now);
-    } catch {
-        return null;
-    }
-}
-
-function parseCredentialsData(data: CredentialsFile, now: number): { accessToken: string; subscriptionType: string } | null {
-    const accessToken = data.claudeAiOauth?.accessToken;
-    const subscriptionType = data.claudeAiOauth?.subscriptionType ?? "";
-
-    if (!accessToken) return null;
-
-    const expiresAt = data.claudeAiOauth?.expiresAt;
-    if (expiresAt != null && expiresAt <= now) return null;
-
-    return { accessToken, subscriptionType };
-}
-
-function getPlanName(subscriptionType: string): string | null {
-    const lower = subscriptionType.toLowerCase();
-    if (lower.includes("max")) return "Max";
-    if (lower.includes("pro")) return "Pro";
-    if (lower.includes("team")) return "Team";
-    if (!subscriptionType || lower.includes("api")) return null;
-    return subscriptionType.charAt(0).toUpperCase() + subscriptionType.slice(1);
-}
-
-function parseUtilization(value: number | undefined): number | null {
-    if (value == null) return null;
-    if (!Number.isFinite(value)) return null;
-    return Math.round(Math.max(0, Math.min(100, value)));
-}
-
-function parseDate(dateStr: string | undefined): Date | null {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
-    return date;
-}
-
-function fetchUsageApi(accessToken: string): Promise<UsageApiResponse | null> {
-    return new Promise((resolve) => {
-        const options = {
-            hostname: "api.anthropic.com",
-            path: "/api/oauth/usage",
-            method: "GET",
-            headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "anthropic-beta": "oauth-2025-04-20",
-                "User-Agent": `ccsl/${PKG_VERSION}`,
-            },
-            timeout: 5000,
-        };
-
-        const req = https.request(options, (res) => {
-            let data = "";
-            res.on("data", (chunk: Buffer) => { data += chunk.toString(); });
-            res.on("end", () => {
-                if (res.statusCode !== 200) {
-                    resolve(null);
-                    return;
-                }
-                try {
-                    resolve(JSON.parse(data));
-                } catch {
-                    resolve(null);
-                }
-            });
-        });
-
-        req.on("error", () => resolve(null));
-        req.on("timeout", () => { req.destroy(); resolve(null); });
-        req.end();
-    });
-}
-
-function readLastGoodFromCache(planName: string | null): UsageData | null {
-    try {
-        const cachePath = getUsageCachePath();
-        if (!existsSync(cachePath)) return null;
-        const cache: UsageCacheFile = JSON.parse(readFileSync(cachePath, "utf8"));
-        if (cache.lastGood) {
-            return hydrateUsageDates({ ...cache.lastGood, planName: planName ?? cache.lastGood.planName, stale: true });
-        }
-    } catch { /* ignore */ }
-    return null;
-}
-
-function usageFromRateLimits(rateLimits: { five_hour?: RateLimitWindow; seven_day?: RateLimitWindow }): UsageData {
+export function usageFromRateLimits(rateLimits: { five_hour?: RateLimitWindow; seven_day?: RateLimitWindow }): UsageData {
     return {
-        planName: null,
         fiveHour: rateLimits.five_hour != null ? Math.round(rateLimits.five_hour.used_percentage) : null,
         sevenDay: rateLimits.seven_day != null ? Math.round(rateLimits.seven_day.used_percentage) : null,
         fiveHourResetAt: rateLimits.five_hour ? new Date(rateLimits.five_hour.resets_at * 1000) : null,
@@ -750,177 +450,16 @@ function usageFromRateLimits(rateLimits: { five_hour?: RateLimitWindow; seven_da
     };
 }
 
-/** @deprecated — use native rate_limits from StatuslineInput when available */
-export async function getUsageData(): Promise<UsageData | null> {
-    const now = Date.now();
-
-    const cached = readUsageCache(now);
-    if (cached) return cached;
-
-    try {
-        let credentials = readKeychainCredentials(now);
-        if (!credentials) {
-            credentials = readFileCredentials(now);
-        }
-        if (!credentials) return null;
-
-        const { accessToken, subscriptionType } = credentials;
-        const planName = getPlanName(subscriptionType);
-        if (!planName) return null;
-
-        const apiResponse = await fetchUsageApi(accessToken);
-        if (!apiResponse) {
-            const failureResult: UsageData = {
-                planName,
-                fiveHour: null,
-                sevenDay: null,
-                fiveHourResetAt: null,
-                sevenDayResetAt: null,
-                apiUnavailable: true,
-            };
-            writeUsageCache(failureResult, now);
-            return readLastGoodFromCache(planName);
-        }
-
-        const result: UsageData = {
-            planName,
-            fiveHour: parseUtilization(apiResponse.five_hour?.utilization),
-            sevenDay: parseUtilization(apiResponse.seven_day?.utilization),
-            fiveHourResetAt: parseDate(apiResponse.five_hour?.resets_at),
-            sevenDayResetAt: parseDate(apiResponse.seven_day?.resets_at),
-        };
-
-        writeUsageCache(result, now);
-        return result;
-    } catch {
-        return null;
-    }
-}
-
-// ============================================================================
-// Learning Loop Status
-// ============================================================================
-
-function getInstinctStatus(claudeDir: string): InstinctStatus | null {
-    try {
-        const instinctsPath = join(claudeDir, "instincts.json");
-        if (!existsSync(instinctsPath)) return null;
-
-        const instincts: Array<{
-            confidence?: number;
-            seen_count?: number;
-            evolved_to?: string | null;
-        }> = JSON.parse(readFileSync(instinctsPath, "utf8"));
-
-        if (!Array.isArray(instincts)) return null;
-
-        const activeCount = instincts.length;
-        const promotableCount = instincts.filter(i =>
-            (i.confidence ?? 0) >= 0.8 &&
-            (i.seen_count ?? 0) >= 3 &&
-            i.evolved_to === null
-        ).length;
-
-        let correctionsThisSession = 0;
-        let unprocessedObservations = 0;
-        const obsPath = join(claudeDir, ".observations.jsonl");
-        const markerPath = join(claudeDir, ".observer.marker");
-        if (existsSync(obsPath)) {
-            const obsContent = readFileSync(obsPath, "utf8");
-            const allLines = obsContent.trim().split("\n").filter(l => l.length > 0);
-
-            let markerLine = 0;
-            if (existsSync(markerPath)) {
-                markerLine = parseInt(readFileSync(markerPath, "utf8").trim(), 10) || 0;
-            }
-
-            const unprocessed = allLines.slice(markerLine);
-            unprocessedObservations = unprocessed.length;
-            for (const line of unprocessed) {
-                if (line.includes('"correction"')) correctionsThisSession++;
-            }
-        }
-
-        return { activeCount, promotableCount, correctionsThisSession, unprocessedObservations };
-    } catch {
-        return null;
-    }
-}
-
-export function getLearningStatus(sessionStart: Date | undefined, transcriptPath?: string): LearningStatus {
-    const claudeDir = join(homedir(), ".claude");
-
-    let recalledThisSession = false;
-    try {
-        const recallPath = join(claudeDir, ".last-recall");
-        if (existsSync(recallPath)) {
-            const ts = parseInt(readFileSync(recallPath, "utf8").trim(), 10);
-            if (sessionStart) {
-                recalledThisSession = ts * 1000 >= sessionStart.getTime();
-            } else {
-                recalledThisSession = Date.now() - ts * 1000 < 5 * 60 * 1000;
-            }
-        }
-    } catch { /* ignore */ }
-
-    const learningPending = existsSync(join(claudeDir, ".learning-pending"));
-
-    let autoLearn = false;
-    try {
-        const mode = JSON.parse(readFileSync(join(claudeDir, "learning-mode.json"), "utf8"));
-        autoLearn = mode.auto === true;
-    } catch { /* ignore */ }
-
-    let lastLearnedDate: string | null = null;
-    try {
-        const learnPath = join(claudeDir, ".last-learn");
-        if (existsSync(learnPath)) {
-            const ts = parseInt(readFileSync(learnPath, "utf8").trim(), 10);
-            const diffMs = Date.now() - ts * 1000;
-            const diffMin = Math.floor(diffMs / 60000);
-            const diffHrs = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
-            if (diffMin < 60) lastLearnedDate = `${diffMin}m`;
-            else if (diffHrs < 24) lastLearnedDate = `${diffHrs}h`;
-            else lastLearnedDate = `${diffDays}d`;
-        } else {
-            const log = readFileSync(join(claudeDir, "learning-log.md"), "utf8");
-            const match = log.match(/^## (\d{4})-(\d{2})-(\d{2})/m);
-            if (match) {
-                const logDate = new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
-                const diffDays = Math.floor((Date.now() - logDate.getTime()) / 86400000);
-                lastLearnedDate = diffDays === 0 ? "0d" : `${diffDays}d`;
-            }
-        }
-    } catch { /* ignore */ }
-
-    const instinctStatus = getInstinctStatus(claudeDir);
-
-    let compactionCount = 0;
-    if (transcriptPath) {
-        try {
-            const sessionId = transcriptPath.split("/").pop()?.replace(/\.jsonl$/, "");
-            if (sessionId) {
-                const snapshotDir = join(claudeDir, ".learn-snapshots");
-                if (existsSync(snapshotDir)) {
-                    const files = readdirSync(snapshotDir);
-                    compactionCount = files.filter(f => f.startsWith(sessionId)).length;
-                }
-            }
-        } catch { /* ignore */ }
-    }
-
-    return { recalledThisSession, learningPending, autoLearn, lastLearnedDate, instinctStatus, compactionCount };
-}
-
 // ============================================================================
 // Terminal Width
 // ============================================================================
-// Claude Code >= 2.1.139 spawns statusline subprocesses without a controlling
-// TTY, which makes `stty size < /dev/tty` fail with ENOTTY. We walk up
-// ancestor PIDs to find a shell process that owns the real PTY, then ask
-// stty to open that device directly with `-F` (GNU) or `-f` (BSD), which uses
-// O_NOCTTY and works even from a process without its own controlling terminal.
+// Claude Code >= 2.1.153 sets COLUMNS/LINES in the statusline subprocess
+// environment, so width detection is usually free. Older versions spawn the
+// subprocess without a controlling TTY (and with a narrow ~80-col PTY on
+// stdout), so as a fallback we walk up ancestor PIDs to find a shell process
+// that owns the real PTY, then ask stty to open that device directly with
+// `-F` (GNU) or `-f` (BSD), which uses O_NOCTTY and works even from a process
+// without its own controlling terminal.
 
 // shell -> Claude Code -> node -> ccsl is ~4 levels; 8 leaves headroom for
 // multiplexers (tmux, screen) and nested shells.
@@ -998,6 +537,14 @@ export function getTerminalWidth(): number | null {
         if (parsed !== null) return parsed;
     }
 
+    // Claude Code >= 2.1.153 sets COLUMNS to the real terminal width before
+    // invoking the statusline command.
+    const envCols = process.env.COLUMNS;
+    if (envCols) {
+        const parsed = parsePositiveInteger(envCols);
+        if (parsed !== null) return parsed;
+    }
+
     if (process.platform === "win32") return null;
 
     let pid = process.pid;
@@ -1062,43 +609,18 @@ export async function main() {
     const projectDir = getProjectDir(input);
     const config = readStatuslineConfig();
 
-    const nativeUsage = input.rate_limits ? usageFromRateLimits(input.rate_limits) : null;
+    const usageData = input.rate_limits ? usageFromRateLimits(input.rate_limits) : null;
 
-    const promises: [
-        Promise<GitRepoInfo | null>,
-        Promise<TranscriptData | null>,
-        Promise<ConfigCounts>,
-        Promise<UsageData | null>,
-    ] = [
+    const [gitInfo, transcriptData, configCounts] = await Promise.all([
         fetchGitRepoInfo(projectDir),
         parseTranscriptFull(input.transcript_path),
         Promise.resolve(countConfigs(projectDir)),
-        nativeUsage ? Promise.resolve(nativeUsage) : getUsageData(),
-    ];
+    ]);
 
-    const [gitInfo, transcriptData, configCounts, usageData] = await Promise.all(promises);
+    const prInfo = prInfoFromInput(input) ?? (gitInfo ? await fetchPrInfo() : null);
 
-    if (transcriptData && config.features.remoteControl) {
-        const sessionId = input.session_id ?? deriveSessionIdFromTranscript(input.transcript_path);
-        const sessionFile = sessionId ? findSessionFile(sessionId) : null;
-        const transcriptHadBridge = transcriptData.remoteControlActive === true;
-        const rc = detectRemoteControl(sessionFile, transcriptHadBridge);
-        transcriptData.remoteControlActive = rc.active;
-        transcriptData.remoteControlUrl = rc.url;
-    }
-
-    const prInfo = gitInfo ? await fetchPrInfo() : null;
-
-    const learningStatus = config.features.learning
-        ? getLearningStatus(transcriptData?.sessionStart, input.transcript_path)
-        : null;
-
-    const maybeTerminalWidth = getTerminalWidth();
-    const termWidth = maybeTerminalWidth || process.stdout.columns || parseInt(process.env.COLUMNS || "0") || 75;
-    const contextPercent = calculatePercentUsed(
-        calculateCurrentTokens(getCurrentUsage(input)),
-        getContextWindowSize(input),
-    );
+    const termWidth = getTerminalWidth() || process.stdout.columns || 75;
+    const contextPercent = getPercentUsed(input);
     const maxWidth = calculateMaxWidth(termWidth, config, contextPercent);
 
     const data: UnifiedStatuslineData = {
@@ -1108,7 +630,6 @@ export async function main() {
         transcriptData,
         configCounts,
         usageData,
-        learningStatus,
     };
 
     const output = buildStatuslineOutput(data, maxWidth, termWidth, config);

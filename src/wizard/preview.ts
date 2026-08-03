@@ -5,13 +5,14 @@ import { boxTop, boxBottom, dim } from "./ui.js";
 export function generateMockData(): UnifiedStatuslineData {
     return {
         input: {
-            model: { display_name: "Opus" },
+            model: { id: "claude-opus-5", display_name: "Opus" },
             workspace: {
                 current_dir: "/Users/dev/my-project",
                 project_dir: "/Users/dev/my-project",
             },
-            version: "1.0.80",
+            version: "2.1.220",
             transcript_path: "/tmp/transcript-abc123.jsonl",
+            effort: { level: "high" },
             cost: {
                 total_cost_usd: 4.82,
                 total_duration_ms: 1854000,
@@ -81,28 +82,13 @@ export function generateMockData(): UnifiedStatuslineData {
                 { subject: "Write unit tests", status: "pending" },
                 { subject: "Update documentation", status: "pending" },
             ],
-            sessionStart: new Date(Date.now() - 1854000),
         },
         configCounts: { claudeMdCount: 3, mcpCount: 5, hooksCount: 4 },
         usageData: {
-            planName: "Max",
             fiveHour: 34,
             sevenDay: 12,
             fiveHourResetAt: new Date(Date.now() + 4 * 3600 * 1000),
             sevenDayResetAt: new Date(Date.now() + 5 * 24 * 3600 * 1000),
-        },
-        learningStatus: {
-            recalledThisSession: true,
-            learningPending: false,
-            autoLearn: true,
-            lastLearnedDate: "Feb 24",
-            instinctStatus: {
-                activeCount: 12,
-                promotableCount: 2,
-                correctionsThisSession: 0,
-                unprocessedObservations: 3,
-            },
-            compactionCount: 1,
         },
     };
 }

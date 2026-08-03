@@ -9,14 +9,31 @@ export interface RateLimitWindow {
     resets_at: number;
 }
 
+export interface NativePrInfo {
+    number: number;
+    url: string;
+    review_state?: "approved" | "pending" | "changes_requested" | "draft" | string;
+}
+
 export interface StatuslineInput {
-    model: { display_name: string };
-    workspace: { current_dir: string; project_dir: string; added_dirs?: string[] };
+    model: { id?: string; display_name: string };
+    workspace: {
+        current_dir: string;
+        project_dir: string;
+        added_dirs?: string[];
+        git_worktree?: string;
+        repo?: { host: string; owner: string; name: string };
+    };
     version: string;
     transcript_path: string;
     session_id?: string;
     session_name?: string;
     output_style?: { name: string };
+    fast_mode?: boolean;
+    thinking?: { enabled: boolean };
+    effort?: { level: string };
+    agent?: { name: string };
+    pr?: NativePrInfo;
     cost: {
         total_cost_usd: number;
         total_duration_ms: number;
@@ -29,8 +46,8 @@ export interface StatuslineInput {
         total_output_tokens: number;
         context_window_size: number;
         current_usage: CurrentUsage | null;
-        used_percentage?: number;
-        remaining_percentage?: number;
+        used_percentage?: number | null;
+        remaining_percentage?: number | null;
     };
     rate_limits?: {
         five_hour?: RateLimitWindow;
@@ -41,8 +58,9 @@ export interface StatuslineInput {
     worktree?: {
         name: string;
         path: string;
-        branch: string;
-        original_repo_dir: string;
+        branch?: string;
+        original_cwd?: string;
+        original_branch?: string;
     };
 }
 
@@ -73,22 +91,16 @@ export interface ToolAggregation {
 }
 
 export interface UsageData {
-    planName: string | null;
     fiveHour: number | null;
     sevenDay: number | null;
     fiveHourResetAt: Date | null;
     sevenDayResetAt: Date | null;
-    apiUnavailable?: boolean;
-    stale?: boolean;
 }
 
 export interface TranscriptData {
     tools: ToolAggregation;
     agents: AgentEntry[];
     todos: TodoItem[];
-    sessionStart?: Date;
-    remoteControlActive?: boolean;
-    remoteControlUrl?: string;
 }
 
 export interface GitFileStats {
@@ -119,22 +131,6 @@ export interface PrInfo {
     reviewDecision?: string;
 }
 
-export interface InstinctStatus {
-    activeCount: number;
-    promotableCount: number;
-    correctionsThisSession: number;
-    unprocessedObservations: number;
-}
-
-export interface LearningStatus {
-    recalledThisSession: boolean;
-    learningPending: boolean;
-    autoLearn: boolean;
-    lastLearnedDate: string | null;
-    instinctStatus: InstinctStatus | null;
-    compactionCount: number;
-}
-
 export interface UnifiedStatuslineData {
     input: StatuslineInput;
     gitInfo: GitRepoInfo | null;
@@ -142,24 +138,23 @@ export interface UnifiedStatuslineData {
     transcriptData: TranscriptData | null;
     configCounts: ConfigCounts | null;
     usageData: UsageData | null;
-    learningStatus: LearningStatus | null;
 }
 
 export type LayoutMode = "semantic" | "dense" | "adaptive";
 
 export type BadgeGroup =
     | "identity" | "context" | "usage" | "git" | "config" | "pr"
-    | "learning" | "remoteControl" | "transcript" | "tools" | "agents" | "todos";
+    | "transcript" | "tools" | "agents" | "todos";
 
 export type RowConfig = (BadgeGroup[] | "---")[];
 
 export const BADGE_GROUPS: BadgeGroup[] = [
     "identity", "context", "usage", "git", "config", "pr",
-    "learning", "remoteControl", "transcript", "tools", "agents", "todos",
+    "transcript", "tools", "agents", "todos",
 ];
 
 export const PRESET_DENSE: RowConfig = [
-    ["identity", "learning", "remoteControl"],
+    ["identity"],
     ["context", "usage", "config"],
     ["git", "pr"],
     "---",
@@ -173,7 +168,6 @@ export const PRESET_SEMANTIC: RowConfig = [
     ["context", "usage"],
     ["git"],
     ["config", "pr"],
-    ["learning", "remoteControl"],
     "---",
     ["transcript", "tools"],
     ["agents"],
@@ -181,7 +175,7 @@ export const PRESET_SEMANTIC: RowConfig = [
 ];
 
 export const PRESET_ADAPTIVE: RowConfig = [
-    ["identity", "context", "usage", "git", "config", "pr", "learning", "remoteControl", "transcript", "tools", "agents", "todos"],
+    ["identity", "context", "usage", "git", "config", "pr", "transcript", "tools", "agents", "todos"],
 ];
 
 export const DEFAULT_ROWS: RowConfig = PRESET_DENSE;
@@ -213,9 +207,4 @@ export interface CcslConfig {
     flexPadding?: number;
     badgeSpacing?: boolean;
     badgeStyle?: BadgeStyle;
-    features: {
-        usage: boolean;
-        learning: boolean;
-        remoteControl: boolean;
-    };
 }

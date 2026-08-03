@@ -69,10 +69,22 @@ const badges = [];
 
 // ── Identity ──
 badges.push(section("Identity"));
-badges.push(row("Model / Plan",
+badges.push(row("Model / Fast mode",
     badge("Opus", C.blue),
-    badge("Sonnet | Pro", C.blue),
-    badge("Opus | Max", C.blue),
+    badge("Sonnet", C.blue),
+    badge("Fable | fast", C.blue),
+));
+badges.push(row("Reasoning effort",
+    badge("💭 low", C.steel),
+    badge("💭 medium", C.blue),
+    badge("💭 high", C.gold),
+    badge("💭 xhigh", C.orange),
+    badge("💭 max", C.rose),
+    badge("💭 off", C.steel),
+));
+badges.push(row("Agent session",
+    badge("🤖 security-reviewer", C.purple),
+    badge("🤖 code-explorer", C.purple),
 ));
 badges.push(row("Duration (gradient)",
     badge("⏲ 30s", C.green),
@@ -101,8 +113,8 @@ badges.push(row("Cache breakdown",
     badge("🔥 45kr·22kw·8ku", C.cyan),
 ));
 
-// ── Usage (optional) ──
-badges.push(section("Usage Rate Limit &nbsp;<span class=\"feature-tag\">features.usage</span>"));
+// ── Usage ──
+badges.push(section("Usage Rate Limits"));
 badges.push(row("5h usage bar",
     barBadge("⚡", 12, C.barGreen, " 12% (4h 23m / 5h) ", C.orange),
     barBadge("⚡", 65, C.barYellow, " 65% (1h 45m / 5h) ", C.orange),
@@ -114,10 +126,6 @@ badges.push(row("7d usage (gradient)",
     badge("7d 50%", C.orange),
     badge("7d 80%", gradient(0.5, C.orange, C.rose)),
     badge("7d 95%", C.rose),
-));
-badges.push(row("Stale",
-    barBadge("⚡", 42, C.barGreen, " ~42% (~3h 10m / 5h) ", C.orange),
-    badge("7d ~26%", gradient(0.52, C.green, C.orange)),
 ));
 
 // ── Git ──
@@ -168,36 +176,6 @@ badges.push(row("PR link",
     badge("🔗 PR#42 (✅)", C.blue),
     badge("🔗 PR#42 (M)", C.purple),
     badge("🔗 PR#42 (C)", C.steel),
-));
-
-// ── Learning (optional) ──
-badges.push(section("Learning &nbsp;<span class=\"feature-tag\">features.learning</span>"));
-badges.push(row("Recall status",
-    badge("🧩 ✓", C.green),
-    badge("🧩 ✗", C.steel),
-));
-badges.push(row("Learn status",
-    badge("📚 15m ✓", C.green),
-    badge("📚 2h 342", C.gold),
-    badge("📚 3d 1418", C.gold),
-    badge("📚 ⚠ 500", C.rose),
-    badge("📚 ✓", C.steel),
-));
-badges.push(row("Compaction count",
-    badge("📦 1", C.gold),
-    badge("📦 3", C.orange),
-));
-badges.push(row("Instinct status",
-    badge("🧬 21", C.steel),
-    badge("🧬 21 ▲3", C.gold),
-    badge("🧬 21 !", C.rose),
-));
-
-// ── Remote Control (optional) ──
-badges.push(section("Remote Control &nbsp;<span class=\"feature-tag\">features.remoteControl</span>"));
-badges.push(row("RC status",
-    badge("📱 ✓", C.cyan),
-    badge("📱 ✗", C.steel),
 ));
 
 // ── Transcript & Tools ──

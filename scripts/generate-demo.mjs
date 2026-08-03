@@ -29,12 +29,8 @@ let configBackup;
 try { configBackup = readFileSync(CONFIG_PATH, "utf8"); } catch { configBackup = null; }
 let httpServer = null;
 
-const SNAPSHOT_DIR = join(process.env.HOME, ".claude/.learn-snapshots");
-const DEMO_SNAPSHOTS = ["transcript-compaction-1.md", "transcript-compaction-2.md"];
-
 function cleanup() {
     if (configBackup !== null) writeFileSync(CONFIG_PATH, configBackup);
-    for (const f of DEMO_SNAPSHOTS) try { rmSync(join(SNAPSHOT_DIR, f)); } catch {}
     try { rmSync(TMP, { recursive: true, force: true }); } catch {}
     if (httpServer) { httpServer.close(); httpServer = null; }
 }
@@ -109,16 +105,7 @@ tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_u
 tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: "todo1" }] } }));
 tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: "running1", name: "Bash", input: { command: "npm test -- --coverage --watch" } }] } }));
 
-// Remote Control bridge_status entry for RC badge detection
-tlines.push(JSON.stringify({ timestamp: TS, type: "system", subtype: "bridge_status", content: "/remote-control is active." }));
-
 writeFileSync(TRANSCRIPT, tlines.join("\n") + "\n");
-
-// ─── Fake learn-snapshots for compaction badge ──────────────────────────────
-
-console.log("==> Creating demo compaction snapshots");
-mkdirSync(SNAPSHOT_DIR, { recursive: true });
-for (const f of DEMO_SNAPSHOTS) writeFileSync(join(SNAPSHOT_DIR, f), "demo snapshot");
 
 // ─── Render ANSI ────────────────────────────────────────────────────────────
 
@@ -130,9 +117,13 @@ const INPUT = JSON.stringify({
     hook_event_name: "Status", session_id: "demo",
     transcript_path: TRANSCRIPT, cwd: DEMO_REPO,
     session_name: "feature-auth-refactor",
-    model: { id: "claude-opus-4-6", display_name: "Opus 4.6 (1M context)" },
+    model: { id: "claude-opus-5", display_name: "Opus (1M context)" },
     workspace: { current_dir: DEMO_REPO, project_dir: DEMO_REPO, added_dirs: ["/tmp/shared-utils"] },
-    version: "2.1.81", output_style: { name: "default" },
+    version: "2.1.220", output_style: { name: "default" },
+    fast_mode: false,
+    thinking: { enabled: true },
+    effort: { level: "high" },
+    pr: { number: 42, url: "https://github.com/user/example-project/pull/42", review_state: "approved" },
     cost: { total_cost_usd: 4.82, total_duration_ms: 1854000, total_api_duration_ms: 1200000, total_lines_added: 284, total_lines_removed: 67 },
     context_window: { total_input_tokens: 95000, total_output_tokens: 18000, context_window_size: 1000000,
         current_usage: { input_tokens: 28000, cache_creation_input_tokens: 45000, cache_read_input_tokens: 22000 },
@@ -143,13 +134,10 @@ const INPUT = JSON.stringify({
     },
 });
 
-const VARIANTS = ["dense", "dense-full", "semantic", "semantic-full", "adaptive", "adaptive-full"];
+const VARIANTS = ["dense", "semantic", "adaptive"];
 
 for (const variant of VARIANTS) {
-    const layout = variant.replace("-full", "");
-    const features = variant.endsWith("-full");
-    const config = { layout, features: { usage: features, learning: features, remoteControl: features } };
-    writeFileSync(CONFIG_PATH, JSON.stringify(config));
+    writeFileSync(CONFIG_PATH, JSON.stringify({ layout: variant }));
 
     const ansi = run("node", [CCSL_BIN], {
         input: INPUT,

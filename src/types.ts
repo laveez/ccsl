@@ -143,19 +143,19 @@ export interface UnifiedStatuslineData {
 export type LayoutMode = "semantic" | "dense" | "adaptive";
 
 export type BadgeGroup =
-    | "identity" | "context" | "usage" | "git" | "config" | "pr"
+    | "identity" | "context" | "usage" | "usage7d" | "git" | "config" | "pr"
     | "transcript" | "tools" | "agents" | "todos";
 
 export type RowConfig = (BadgeGroup[] | "---")[];
 
 export const BADGE_GROUPS: BadgeGroup[] = [
-    "identity", "context", "usage", "git", "config", "pr",
+    "identity", "context", "usage", "usage7d", "git", "config", "pr",
     "transcript", "tools", "agents", "todos",
 ];
 
 export const PRESET_DENSE: RowConfig = [
-    ["identity"],
-    ["context", "usage", "config"],
+    ["identity", "usage"],
+    ["context", "usage7d", "config"],
     ["git", "pr"],
     "---",
     ["transcript", "tools"],
@@ -164,8 +164,8 @@ export const PRESET_DENSE: RowConfig = [
 ];
 
 export const PRESET_SEMANTIC: RowConfig = [
-    ["identity"],
-    ["context", "usage"],
+    ["identity", "usage"],
+    ["context", "usage7d"],
     ["git"],
     ["config", "pr"],
     "---",
@@ -175,7 +175,7 @@ export const PRESET_SEMANTIC: RowConfig = [
 ];
 
 export const PRESET_ADAPTIVE: RowConfig = [
-    ["identity", "context", "usage", "git", "config", "pr", "transcript", "tools", "agents", "todos"],
+    ["identity", "usage", "context", "usage7d", "git", "config", "pr", "transcript", "tools", "agents", "todos"],
 ];
 
 export const DEFAULT_ROWS: RowConfig = PRESET_DENSE;

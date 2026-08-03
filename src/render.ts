@@ -160,22 +160,23 @@ function buildContextBadges(input: StatuslineInput): string[] {
     return badges;
 }
 
-function buildUsageBadges(usageData: UsageData | null): string[] {
+function buildUsage5hBadge(usageData: UsageData | null): string[] {
     if (!usageData || usageData.fiveHour === null) return [];
     const fiveHour = Math.round(usageData.fiveHour);
     const resetTime = formatTimeUntil(usageData.fiveHourResetAt);
     const resetStr = resetTime ? ` (${resetTime} / 5h)` : "";
     const barText = ` ${fiveHour}%${resetStr} `;
     const inlineBar = renderBarWithText(fiveHour, barText);
-    const badges = [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
-    if (usageData.sevenDay !== null) {
-        const sevenDay = Math.round(usageData.sevenDay);
-        const bg7d = gradientColor([
-            [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
-        ], sevenDay);
-        badges.push(badgeGradient(bg7d, `7d ${sevenDay}%`));
-    }
-    return badges;
+    return [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
+}
+
+function buildUsage7dBadge(usageData: UsageData | null): string[] {
+    if (!usageData || usageData.sevenDay === null) return [];
+    const sevenDay = Math.round(usageData.sevenDay);
+    const bg7d = gradientColor([
+        [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
+    ], sevenDay);
+    return [badgeGradient(bg7d, `7d ${sevenDay}%`)];
 }
 
 function buildGitBadges(gitInfo: GitRepoInfo | null, input: StatuslineInput): string[] {
@@ -330,7 +331,8 @@ type BadgeGroupBuilder = (data: UnifiedStatuslineData) => string[];
 const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
     identity: (data) => buildIdentityBadges(data.input, getDuration(data.input)),
     context: (data) => buildContextBadges(data.input),
-    usage: (data) => buildUsageBadges(data.usageData),
+    usage: (data) => buildUsage5hBadge(data.usageData),
+    usage7d: (data) => buildUsage7dBadge(data.usageData),
     git: (data) => buildGitBadges(data.gitInfo, data.input),
     config: (data) => buildConfigBadges(data.configCounts, data.input.workspace.added_dirs),
     pr: (data) => buildPrBadges(data.prInfo),

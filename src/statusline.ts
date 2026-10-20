@@ -196,6 +196,7 @@ export async function fetchPrInfo(): Promise<PrInfo | null> {
 // ============================================================================
 
 interface TranscriptLine {
+    type?: string;
     timestamp?: string;
     message?: {
         content?: ContentBlock[];
@@ -257,6 +258,10 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
 
             try {
                 const entry = JSON.parse(line) as TranscriptLine;
+                // Claude Code 2.1.300+ also records every API request (type "api-request-blob"),
+                // replaying earlier tool_use/tool_result blocks out of order; only user and
+                // assistant entries are the live conversation.
+                if (entry.type !== "user" && entry.type !== "assistant") continue;
                 const timestamp = entry.timestamp ? new Date(entry.timestamp) : new Date();
 
                 const content = entry.message?.content;

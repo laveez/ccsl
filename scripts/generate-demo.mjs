@@ -68,9 +68,17 @@ const TS = "2026-02-20T10:00:00Z";
 let tid = 0;
 const tlines = [];
 
+function toolUse(id, name, input) {
+    tlines.push(JSON.stringify({ type: "assistant", timestamp: TS, message: { content: [{ type: "tool_use", id, name, input }] } }));
+}
+
+function toolResult(id) {
+    tlines.push(JSON.stringify({ type: "user", timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: id }] } }));
+}
+
 function emit(name, input) {
-    tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: `t${tid}`, name, input }] } }));
-    tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: `t${tid}` }] } }));
+    toolUse(`t${tid}`, name, input);
+    toolResult(`t${tid}`);
     tid += 2;
 }
 
@@ -83,10 +91,8 @@ for (const c of ["npm run build","npm test","git status","git diff --stat","git 
 emit("WebSearch", { query: "typescript best practices 2026" });
 
 // Task agents
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: `t${tid}`, name: "Task", input: { subagent_type: "feature-dev:code-reviewer", description: "Review auth implementation", prompt: "Review" } }] } }));
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: `t${tid}` }] } })); tid += 2;
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: `t${tid}`, name: "Task", input: { subagent_type: "general-purpose", description: "Generate test fixtures", prompt: "Generate" } }] } }));
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: `t${tid}` }] } })); tid += 2;
+emit("Task", { subagent_type: "feature-dev:code-reviewer", description: "Review auth implementation", prompt: "Review" });
+emit("Task", { subagent_type: "general-purpose", description: "Generate test fixtures", prompt: "Generate" });
 
 for (const t of ["browser_navigate","browser_snapshot","browser_click","browser_take_screenshot","browser_fill_form","browser_evaluate"]) emit(`mcp__plugin_playwright_playwright__${t}`, {});
 emit("mcp__plugin_context7_context7__resolve-library-id", { libraryName: "react" });
@@ -94,16 +100,15 @@ emit("mcp__plugin_context7_context7__query-docs", { libraryId: "/facebook/react"
 emit("mcp__plugin_context7_context7__query-docs", { libraryId: "/vercel/next.js" });
 emit("Skill", { skill: "commit" }); emit("ToolSearch", { query: "playwright" });
 
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: "todo1", name: "TodoWrite", input: { todos: [
+emit("TodoWrite", { todos: [
     { subject: "Extract types into separate module", status: "completed" },
     { subject: "Refactor render pipeline", status: "completed" },
     { subject: "Add rate limiting", status: "in_progress" },
     { subject: "Write unit tests", status: "pending" },
     { subject: "Update documentation", status: "pending" },
     { subject: "Performance benchmarks", status: "pending" },
-] } }] } }));
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: "todo1" }] } }));
-tlines.push(JSON.stringify({ timestamp: TS, message: { content: [{ type: "tool_use", id: "running1", name: "Bash", input: { command: "npm test -- --coverage --watch" } }] } }));
+] });
+toolUse("running1", "Bash", { command: "npm test -- --coverage --watch" });
 
 writeFileSync(TRANSCRIPT, tlines.join("\n") + "\n");
 

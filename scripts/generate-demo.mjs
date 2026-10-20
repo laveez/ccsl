@@ -68,12 +68,12 @@ const TS = "2026-02-20T10:00:00Z";
 let tid = 0;
 const tlines = [];
 
-function toolUse(id, name, input) {
-    tlines.push(JSON.stringify({ type: "assistant", timestamp: TS, message: { content: [{ type: "tool_use", id, name, input }] } }));
+function toolUse(id, name, input, timestamp = TS) {
+    tlines.push(JSON.stringify({ type: "assistant", timestamp, message: { content: [{ type: "tool_use", id, name, input }] } }));
 }
 
-function toolResult(id) {
-    tlines.push(JSON.stringify({ type: "user", timestamp: TS, message: { content: [{ type: "tool_result", tool_use_id: id }] } }));
+function toolResult(id, toolUseResult, timestamp = TS) {
+    tlines.push(JSON.stringify({ type: "user", timestamp, message: { content: [{ type: "tool_result", tool_use_id: id }] }, toolUseResult }));
 }
 
 function emit(name, input) {
@@ -90,9 +90,15 @@ for (const f of ["new-module","tests/new-module.test","validators","tests/valida
 for (const c of ["npm run build","npm test","git status","git diff --stat","git add -A && git commit -m 'feat: add module'","npm run lint","npm run typecheck","npx tsc --noEmit"]) emit("Bash", { command: c });
 emit("WebSearch", { query: "typescript best practices 2026" });
 
-// Task agents
-emit("Task", { subagent_type: "feature-dev:code-reviewer", description: "Review auth implementation", prompt: "Review" });
-emit("Task", { subagent_type: "general-purpose", description: "Generate test fixtures", prompt: "Generate" });
+// Background agents: the launch returns at once, a task notification reports the finish
+const launched = { isAsync: true, status: "async_launched" };
+const runningSince = new Date(Date.now() - 95000).toISOString();
+toolUse("agent1", "Agent", { subagent_type: "feature-dev:code-reviewer", description: "Review auth implementation", prompt: "Review" });
+toolResult("agent1", launched);
+tlines.push(JSON.stringify({ type: "queue-operation", operation: "enqueue", timestamp: "2026-02-20T10:02:10Z",
+    content: "<task-notification>\n<tool-use-id>agent1</tool-use-id>\n<status>completed</status>\n</task-notification>" }));
+toolUse("agent2", "Agent", { subagent_type: "general-purpose", description: "Generate test fixtures", prompt: "Generate" }, runningSince);
+toolResult("agent2", launched, runningSince);
 
 for (const t of ["browser_navigate","browser_snapshot","browser_click","browser_take_screenshot","browser_fill_form","browser_evaluate"]) emit(`mcp__plugin_playwright_playwright__${t}`, {});
 emit("mcp__plugin_context7_context7__resolve-library-id", { libraryName: "react" });

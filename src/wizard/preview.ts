@@ -55,7 +55,7 @@ export function generateMockData(): UnifiedStatuslineData {
                     ["Glob", 3],
                     ["Write", 2],
                     ["Bash", 6],
-                    ["Task", 2],
+                    ["Skill", 2],
                 ]),
             },
             agents: [

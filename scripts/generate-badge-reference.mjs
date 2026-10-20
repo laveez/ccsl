@@ -195,7 +195,7 @@ badges.push(row("Completed tools",
     badge("Edit×7", C.green),
     badge("Bash×8", C.orange),
     badge("WebSearch×1", C.cyan),
-    badge("Task×2", C.blue),
+    badge("Skill×2", C.blue),
 ));
 badges.push(row("MCP tools",
     badge("🔌playwright×6", C.steel),

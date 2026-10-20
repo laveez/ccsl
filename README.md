@@ -71,7 +71,7 @@ Every badge the statusline can show, with all possible states:
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
 | **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
 | **MCP tools** | MCP tool counts grouped by server | `🔌playwright×6`, `🔌context7×3` |
-| **Running agent** | Active Task subagent with elapsed time | `◐ feature Review auth… (2m 30s)` |
+| **Running agent** | Subagent still working, background agents included, with elapsed time | `◐ feature Review auth… (2m 30s)` |
 | **Completed agents** | Recent finished agents (max 2) with duration | `✓ feature Review auth… 2m` |
 | **Tasks** | Current task from TodoWrite with progress | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
 

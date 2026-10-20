@@ -201,6 +201,7 @@ interface TranscriptLine {
     message?: {
         content?: ContentBlock[];
     };
+    toolUseResult?: { status?: string } | string | null;
 }
 
 interface ContentBlock {
@@ -231,6 +232,32 @@ function extractTarget(toolName: string, input?: Record<string, unknown>): strin
     return undefined;
 }
 
+// Claude Code renamed the subagent tool from Task to Agent.
+const AGENT_TOOL_NAMES = new Set(["Agent", "Task"]);
+
+const TASK_NOTIFICATION = /<task-notification>([\s\S]*?)<\/task-notification>/g;
+const NOTIFIED_TOOL_USE_ID = /<tool-use-id>([^<]+)<\/tool-use-id>/;
+
+// Subagents run in the background by default since Claude Code 2.1.198: their
+// tool_result only confirms the launch, and a <task-notification> reports the finish.
+function isBackgroundLaunch(entry: TranscriptLine): boolean {
+    return typeof entry.toolUseResult === "object" && entry.toolUseResult?.status === "async_launched";
+}
+
+// The notification is logged as a queued command, an attachment or a plain prompt
+// depending on what the session was doing, often several times; the first copy
+// marks when the agent finished.
+function completeNotifiedAgents(line: string, agents: Map<string, AgentEntry>, timestamp: Date): void {
+    for (const [, notification] of line.matchAll(TASK_NOTIFICATION)) {
+        const toolUseId = notification.match(NOTIFIED_TOOL_USE_ID)?.[1];
+        const agent = toolUseId ? agents.get(toolUseId) : undefined;
+        if (agent?.status === "running") {
+            agent.status = "completed";
+            agent.endTime = timestamp;
+        }
+    }
+}
+
 export async function parseTranscriptFull(transcriptPath: string): Promise<TranscriptData | null> {
     const result: TranscriptData = {
         tools: { running: [], completed: new Map() },
@@ -258,18 +285,19 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
 
             try {
                 const entry = JSON.parse(line) as TranscriptLine;
+                const timestamp = entry.timestamp ? new Date(entry.timestamp) : new Date();
+                if (line.includes("<task-notification>")) completeNotifiedAgents(line, agentMap, timestamp);
                 // Claude Code 2.1.300+ also records every API request (type "api-request-blob"),
                 // replaying earlier tool_use/tool_result blocks out of order; only user and
                 // assistant entries are the live conversation.
                 if (entry.type !== "user" && entry.type !== "assistant") continue;
-                const timestamp = entry.timestamp ? new Date(entry.timestamp) : new Date();
 
                 const content = entry.message?.content;
                 if (!content || !Array.isArray(content)) continue;
 
                 for (const block of content) {
                     if (block.type === "tool_use" && block.id && block.name) {
-                        if (block.name === "Task") {
+                        if (AGENT_TOOL_NAMES.has(block.name)) {
                             const input = block.input as Record<string, unknown>;
                             const agentEntry: AgentEntry = {
                                 id: block.id,
@@ -306,7 +334,7 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
                         }
 
                         const agent = agentMap.get(block.tool_use_id);
-                        if (agent) {
+                        if (agent && !isBackgroundLaunch(entry)) {
                             agent.status = "completed";
                             agent.endTime = timestamp;
                         }
@@ -321,7 +349,13 @@ export async function parseTranscriptFull(transcriptPath: string): Promise<Trans
             result.tools.running.push({ name: tool.name, target: tool.target });
         }
 
-        result.agents = Array.from(agentMap.values()).slice(-10);
+        // Background agents finish out of launch order, so keep the ones still running and order the rest by
+        // when they finished: the agents row shows the latest finishes.
+        const agents = Array.from(agentMap.values());
+        const finished = agents
+            .filter(a => a.status === "completed")
+            .sort((a, b) => (a.endTime?.getTime() ?? 0) - (b.endTime?.getTime() ?? 0));
+        result.agents = [...agents.filter(a => a.status === "running").slice(-10), ...finished.slice(-10)];
         result.todos = latestTodos;
 
         return result;

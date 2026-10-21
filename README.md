@@ -21,6 +21,8 @@ ccsl replaces Claude Code's default statusline with a dense, color-coded ANSI ba
 
 ### What's New
 
+**v0.4.1**: The 5h and 7d rate limits are now bars measured against the clock. The fill is the share used, a white tick marks how much of the window has passed, and both count down to their reset. The color now shows your pace instead of how much you have used: green at or behind the clock, warming as you run ahead of it. To make room for the 7d bar, the dense layout moves the config badge to the git row. New badges for the prompt cache (`💾 42m·94%`) and a Claude apps gateway spend limit (`💳 $314/$500`), GitLab merge requests in the PR badge, and background subagents in the agents row. Fixes the stuck running tools and inflated tool counts from the API request replays Claude Code 2.1.300+ writes to the transcript.
+
 **v0.4.0** — Stock Claude Code only: removed the custom learning-loop and Remote Control badges and the legacy usage-API polling (no network requests or credential access at all anymore — rate limits come natively from Claude Code). New badges for new Claude Code data: fast mode marker, reasoning effort (`💭 high`), agent sessions (`🤖`). PR badge now uses the native `pr` field (no `gh` subprocess on recent Claude Code), context percentage prefers the native value, and width detection uses the `COLUMNS` env var Claude Code sets since 2.1.153. The 5h usage bar now sits on the header row, with the 7d badge as its own `usage7d` group.
 
 **v0.3.0** — Native rate limits from Claude Code 2.1.80+ (no more API calls/keychain access), PR review decision badges with dynamic colors (green approved, rose changes requested, purple merged), `added_dirs` badge, session name in transcript badge.
@@ -75,7 +77,7 @@ Every badge the statusline can show, with all possible states:
 | **MCP tools** | MCP tool counts grouped by server | `🔌playwright×6`, `🔌context7×3` |
 | **Running agent** | Subagent still working, background agents included, with elapsed time | `◐ feature Review auth… (2m 30s)` |
 | **Completed agents** | Recent finished agents (max 2) with duration | `✓ feature Review auth… 2m` |
-| **Tasks** | Current task from TodoWrite with progress | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
+| **Tasks** | Current task from TodoWrite with progress. Claude Code provides TodoWrite only with `CLAUDE_CODE_ENABLE_TASKS=0`, and on models after Opus 4.7, Sonnet 4.6 and Haiku 4.5 only with `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` as well ([task tool availability](https://code.claude.com/docs/en/tools-reference#task-tool-availability)) | `▸ Add rate limiting (3/6)`, `✓ All done (6/6)` |
 
 ---
 
@@ -101,6 +103,8 @@ Add to your `~/.claude/settings.json`:
 ```
 
 That's it. Claude Code will pipe status data to ccsl on every update.
+
+Claude Code updates the statusline on events such as a new message, so the usage countdowns stand still while a session is idle. To keep them moving, add `"refreshInterval": 60` to the `statusLine` object, which also runs ccsl every 60 seconds.
 
 ---
 

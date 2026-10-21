@@ -158,15 +158,19 @@ export async function fetchGitRepoInfo(projectDir: string): Promise<GitRepoInfo 
 // is no PR or it is merged/closed.
 export function prInfoFromInput(input: StatuslineInput): PrInfo | null {
     if (!input.pr) return null;
-    const { number, url, review_state } = input.pr;
+    const { number, url, review_state, kind } = input.pr;
+    const isMergeRequest = kind === "mr";
+    // For a merge request, Claude Code reports 'approved' when GitLab says it is mergeable.
     return {
         url,
         number: String(number),
         isDraft: review_state === "draft",
         state: "OPEN",
-        reviewDecision: review_state === "approved"
+        mergeStateStatus: isMergeRequest && review_state === "approved" ? "CLEAN" : undefined,
+        reviewDecision: review_state === "approved" && !isMergeRequest
             ? "APPROVED"
             : review_state === "changes_requested" ? "CHANGES_REQUESTED" : undefined,
+        isMergeRequest,
     };
 }
 

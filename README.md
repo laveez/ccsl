@@ -57,8 +57,10 @@ Every badge the statusline can show, with all possible states:
 | **Cost** | Cumulative API cost. Background shifts green → gold → orange → red | `$0.42`, `$4.82`, `$50`, `$123` |
 | **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
 | **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
+| **Prompt cache** | Time until the prompt cache goes cold, then the session's cache hit ratio. Background shifts green → gold → orange as expiry nears, steel once cold | `💾 42m·94%`, `💾 cold·94%` |
 | **Usage (5h)** | 5-hour rate limit bar with reset timer, from Claude Code's native rate limit data | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red |
 | **Usage (7d)** | 7-day rolling rate limit | `7d 26%` |
+| **Spend limit** | Spend against a Claude apps gateway spend limit, in dollars once the gateway reports them | `💳 $314/$500`, `💳 63%` |
 | **Repo name** | Git repository name | `ccsl`, `my-project` |
 | **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
 | **File stats** | Dirty file counts: modified (!), added (+), deleted (✘), untracked (?) | `!3`, `!1+2?4`, `!5+3✘1?2` |
@@ -66,7 +68,7 @@ Every badge the statusline can show, with all possible states:
 | **Lines changed** | Total lines added (green) and removed (red) in session | `📊 +284-67` |
 | **Config summary** | Counts of CLAUDE.md files, MCP servers, and hooks | `📋 2 CLAUDE.md \| 5 MCPs \| 3 hooks` |
 | **Ticket marker** | Jira-style ticket ID extracted from PR title (gh fallback path only) | `🎫 PROJ-123` |
-| **PR link** | Clickable PR with status: Draft, Open, Approved, Changes requested, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(A)`, `(CR)`, `(✅)`, `(M)`, `(C)` |
+| **PR link** | Clickable PR or GitLab merge request with status: Draft, Open, Approved, Changes requested, Mergeable (✅), Merged, Closed | `🔗 PR#42 (D)`, `(O)`, `(A)`, `(CR)`, `(✅)`, `(M)`, `(C)`, `🔗 MR!7 (O)` |
 | **Transcript link** | Clickable `file://` hyperlink to session transcript | `📝 session-abc.jsonl` |
 | **Running tool** | Currently executing tool with target | `◐ Bash: npm test`, `◐ Read: src/types.ts` |
 | **Completed tools** | Tool use counts, color-coded by category | `Read×12`, `Grep×6`, `Bash×8`, `WebSearch×1` |
@@ -142,8 +144,8 @@ Each row is an array of badge group IDs. Use `"---"` for a separator line. Rows 
 | ID | Badges |
 |---|---|
 | `identity` | Model/fast mode, effort, agent, duration, cost |
-| `context` | Context bar, token breakdown |
-| `usage` | 5-hour rate limit bar |
+| `context` | Context bar, token breakdown, prompt cache |
+| `usage` | 5-hour rate limit bar, spend limit |
 | `usage7d` | 7-day rate limit badge |
 | `git` | Repo, branch, file stats, ahead/behind, lines |
 | `config` | CLAUDE.md count, MCPs, hooks |

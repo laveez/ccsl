@@ -9,10 +9,25 @@ export interface RateLimitWindow {
     resets_at: number;
 }
 
+export interface SpendLimit extends RateLimitWindow {
+    used_usd?: number;
+    limit_usd?: number;
+    period?: "daily" | "weekly" | "monthly" | string;
+}
+
+export interface PromptCache {
+    warm: boolean;
+    caching_observed: boolean;
+    ttl: "5m" | "1h" | string;
+    expires_at: number | null;
+    hit_ratio: number | null;
+}
+
 export interface NativePrInfo {
     number: number;
     url: string;
     review_state?: "approved" | "pending" | "changes_requested" | "draft" | string;
+    kind?: "mr" | string;
 }
 
 export interface StatuslineInput {
@@ -52,7 +67,9 @@ export interface StatuslineInput {
     rate_limits?: {
         five_hour?: RateLimitWindow;
         seven_day?: RateLimitWindow;
+        spend_limit?: SpendLimit;
     };
+    prompt_cache?: PromptCache;
     exceeds_200k_tokens?: boolean;
     vim?: { mode: string };
     worktree?: {
@@ -129,6 +146,7 @@ export interface PrInfo {
     state?: string;
     mergeStateStatus?: string;
     reviewDecision?: string;
+    isMergeRequest?: boolean;
 }
 
 export interface UnifiedStatuslineData {

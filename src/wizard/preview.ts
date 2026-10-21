@@ -10,7 +10,7 @@ export function generateMockData(): UnifiedStatuslineData {
                 current_dir: "/Users/dev/my-project",
                 project_dir: "/Users/dev/my-project",
             },
-            version: "2.1.220",
+            version: "2.1.304",
             transcript_path: "/tmp/transcript-abc123.jsonl",
             effort: { level: "high" },
             cost: {
@@ -28,6 +28,13 @@ export function generateMockData(): UnifiedStatuslineData {
                     cache_creation_input_tokens: 45000,
                     cache_read_input_tokens: 22000,
                 },
+            },
+            prompt_cache: {
+                warm: true,
+                caching_observed: true,
+                ttl: "1h",
+                expires_at: Math.floor(Date.now() / 1000) + 42 * 60,
+                hit_ratio: 0.94,
             },
         },
         gitInfo: {

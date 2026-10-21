@@ -130,7 +130,7 @@ const INPUT = JSON.stringify({
     session_name: "feature-auth-refactor",
     model: { id: "claude-opus-5", display_name: "Opus (1M context)" },
     workspace: { current_dir: DEMO_REPO, project_dir: DEMO_REPO, added_dirs: ["/tmp/shared-utils"] },
-    version: "2.1.220", output_style: { name: "default" },
+    version: "2.1.304", output_style: { name: "default" },
     fast_mode: false,
     thinking: { enabled: true },
     effort: { level: "high" },
@@ -139,6 +139,8 @@ const INPUT = JSON.stringify({
     context_window: { total_input_tokens: 95000, total_output_tokens: 18000, context_window_size: 1000000,
         current_usage: { input_tokens: 28000, cache_creation_input_tokens: 45000, cache_read_input_tokens: 22000 },
         used_percentage: 10, remaining_percentage: 90 },
+    prompt_cache: { warm: true, caching_observed: true, ttl: "1h", expires_at: Math.floor(Date.now() / 1000) + 2520,
+        requests: 38, misses: 0, hit_ratio: 0.94 },
     rate_limits: {
         five_hour: { used_percentage: 42, resets_at: Math.floor(Date.now() / 1000) + 7200 },
         seven_day: { used_percentage: 8, resets_at: Math.floor(Date.now() / 1000) + 259200 },

@@ -439,11 +439,13 @@ export const EMOJI_REPLACEMENTS: [RegExp, string][] = [
     [/\ud83c\udf3f/g, "br:"],     // 🌿
     [/\ud83d\udccb/g, "cfg"],     // 📋
     [/\ud83c\udfab/g, "tkt"],     // 🎫
-    [/\ud83d\udd17/g, "PR"],      // 🔗
+    [/\ud83d\udd17 /g, ""],       // 🔗
     [/\ud83d\udcad/g, "eff"],     // 💭
     [/\ud83e\udd16/g, "agent"],   // 🤖
     [/\ud83d\udcdd/g, "log"],     // 📝
     [/\ud83d\udd0c/g, "mcp:"],   // 🔌
+    [/\ud83d\udcbe/g, "cache"],   // 💾
+    [/\ud83d\udcb3/g, "spend"],   // 💳
 ];
 
 export function stripEmojis(text: string): string {

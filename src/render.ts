@@ -11,6 +11,8 @@ import type {
     AgentEntry,
     TodoItem,
     UsageData,
+    PromptCache,
+    SpendLimit,
     UnifiedStatuslineData,
     BadgeColor,
     BadgeGroup,
@@ -160,6 +162,23 @@ function buildContextBadges(input: StatuslineInput): string[] {
     return badges;
 }
 
+const CACHE_TTL_SECONDS: Record<string, number> = { "5m": 300, "1h": 3600 };
+
+function buildPromptCacheBadge(cache: PromptCache | undefined): string[] {
+    if (!cache?.caching_observed) return [];
+    const hit = cache.hit_ratio != null ? `·${Math.round(cache.hit_ratio * 100)}%` : "";
+    const expiresAt = cache.warm ? cache.expires_at : null;
+    const secondsLeft = expiresAt != null ? expiresAt - Date.now() / 1000 : 0;
+    if (expiresAt == null || secondsLeft <= 0) {
+        return [badge("steel", `💾 cold${hit}`)];
+    }
+    const ttl = CACHE_TTL_SECONDS[cache.ttl] ?? 3600;
+    const bg = gradientColor([
+        [0, BADGE.orange], [0.25, BADGE.gold], [1, BADGE.green],
+    ], secondsLeft / ttl);
+    return [badgeGradient(bg, `💾 ${formatTimeUntil(new Date(expiresAt * 1000))}${hit}`)];
+}
+
 function buildUsage5hBadge(usageData: UsageData | null): string[] {
     if (!usageData || usageData.fiveHour === null) return [];
     const fiveHour = Math.round(usageData.fiveHour);
@@ -177,6 +196,18 @@ function buildUsage7dBadge(usageData: UsageData | null): string[] {
         [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
     ], sevenDay);
     return [badgeGradient(bg7d, `7d ${sevenDay}%`)];
+}
+
+function buildSpendLimitBadge(spend: SpendLimit | undefined): string[] {
+    if (!spend) return [];
+    const percent = Math.round(spend.used_percentage);
+    const text = spend.used_usd != null && spend.limit_usd != null
+        ? `💳 $${Math.round(spend.used_usd)}/$${Math.round(spend.limit_usd)}`
+        : `💳 ${percent}%`;
+    const bg = gradientColor([
+        [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
+    ], percent);
+    return [badgeGradient(bg, text)];
 }
 
 function buildGitBadges(gitInfo: GitRepoInfo | null, input: StatuslineInput): string[] {
@@ -230,7 +261,8 @@ function buildPrBadges(prInfo: PrInfo | null): string[] {
     }
     const statusSuffix = getPrStatusSuffix(prInfo);
     const color = getPrBadgeColor(prInfo);
-    const prText = `🔗 PR#${prInfo.number}${statusSuffix}`;
+    const label = prInfo.isMergeRequest ? `MR!${prInfo.number}` : `PR#${prInfo.number}`;
+    const prText = `🔗 ${label}${statusSuffix}`;
     const prBadge = badge(color, prText);
     badges.push(`\x1b]8;;${prInfo.url}\x07${prBadge}\x1b]8;;\x07`);
     return badges;
@@ -330,8 +362,8 @@ type BadgeGroupBuilder = (data: UnifiedStatuslineData) => string[];
 
 const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
     identity: (data) => buildIdentityBadges(data.input, getDuration(data.input)),
-    context: (data) => buildContextBadges(data.input),
-    usage: (data) => buildUsage5hBadge(data.usageData),
+    context: (data) => [...buildContextBadges(data.input), ...buildPromptCacheBadge(data.input.prompt_cache)],
+    usage: (data) => [...buildUsage5hBadge(data.usageData), ...buildSpendLimitBadge(data.input.rate_limits?.spend_limit)],
     usage7d: (data) => buildUsage7dBadge(data.usageData),
     git: (data) => buildGitBadges(data.gitInfo, data.input),
     config: (data) => buildConfigBadges(data.configCounts, data.input.workspace.added_dirs),

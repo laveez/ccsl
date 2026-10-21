@@ -112,6 +112,12 @@ badges.push(row("Cache breakdown",
     badge("🔥 12kr·5kw·800u", C.cyan),
     badge("🔥 45kr·22kw·8ku", C.cyan),
 ));
+badges.push(row("Prompt cache",
+    badge("💾 42m·94%", gradient(0.6, C.gold, C.green)),
+    badge("💾 9m·91%", gradient(0.6, C.orange, C.gold)),
+    badge("💾 2m·88%", C.orange),
+    badge("💾 cold·94%", C.steel),
+));
 
 // ── Usage ──
 badges.push(section("Usage Rate Limits"));
@@ -126,6 +132,12 @@ badges.push(row("7d usage (gradient)",
     badge("7d 50%", C.orange),
     badge("7d 80%", gradient(0.5, C.orange, C.rose)),
     badge("7d 95%", C.rose),
+));
+badges.push(row("Spend limit",
+    badge("💳 $120/$500", gradient(0.48, C.green, C.orange)),
+    badge("💳 $314/$500", gradient(0.43, C.orange, C.rose)),
+    badge("💳 $460/$500", C.rose),
+    badge("💳 63%", gradient(0.43, C.orange, C.rose)),
 ));
 
 // ── Git ──
@@ -176,6 +188,7 @@ badges.push(row("PR link",
     badge("🔗 PR#42 (✅)", C.blue),
     badge("🔗 PR#42 (M)", C.purple),
     badge("🔗 PR#42 (C)", C.steel),
+    badge("🔗 MR!7 (O)", C.blue),
 ));
 
 // ── Transcript & Tools ──

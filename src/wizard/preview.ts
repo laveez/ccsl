@@ -94,7 +94,7 @@ export function generateMockData(): UnifiedStatuslineData {
         usageData: {
             fiveHour: 34,
             sevenDay: 12,
-            fiveHourResetAt: new Date(Date.now() + 4 * 3600 * 1000),
+            fiveHourResetAt: new Date(Date.now() + 2.5 * 3600 * 1000),
             sevenDayResetAt: new Date(Date.now() + 5 * 24 * 3600 * 1000),
         },
     };
@@ -117,6 +117,8 @@ export function renderPreview(config: CcslConfig, termWidth: number): string {
         lines.push(`  ${line}`);
     }
 
+    lines.push("");
+    lines.push(dim("  Usage bars: fill = limit used, white tick = the clock (7d: end of today)"));
     lines.push("");
     lines.push(boxBottom(boxWidth));
     return lines.join("\n");

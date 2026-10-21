@@ -173,8 +173,8 @@ export const BADGE_GROUPS: BadgeGroup[] = [
 
 export const PRESET_DENSE: RowConfig = [
     ["identity", "usage"],
-    ["context", "usage7d", "config"],
-    ["git", "pr"],
+    ["context", "usage7d"],
+    ["git", "pr", "config"],
     "---",
     ["transcript", "tools"],
     ["agents"],

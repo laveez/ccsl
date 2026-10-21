@@ -486,8 +486,8 @@ export function countConfigs(cwd?: string): ConfigCounts {
 
 export function usageFromRateLimits(rateLimits: { five_hour?: RateLimitWindow; seven_day?: RateLimitWindow }): UsageData {
     return {
-        fiveHour: rateLimits.five_hour != null ? Math.round(rateLimits.five_hour.used_percentage) : null,
-        sevenDay: rateLimits.seven_day != null ? Math.round(rateLimits.seven_day.used_percentage) : null,
+        fiveHour: rateLimits.five_hour != null ? rateLimits.five_hour.used_percentage : null,
+        sevenDay: rateLimits.seven_day != null ? rateLimits.seven_day.used_percentage : null,
         fiveHourResetAt: rateLimits.five_hour ? new Date(rateLimits.five_hour.resets_at * 1000) : null,
         sevenDayResetAt: rateLimits.seven_day ? new Date(rateLimits.seven_day.resets_at * 1000) : null,
     };

@@ -58,8 +58,8 @@ Every badge the statusline can show, with all possible states:
 | **Context window** | Visual progress bar of token usage with color-coded fill | Green (<70%), yellow (70–84%), red (≥85%) |
 | **Cache breakdown** | Token split: cache read / cache write / uncached | `🔥 12kr·5kw·800u` |
 | **Prompt cache** | Time until the prompt cache goes cold, then the session's cache hit ratio. Background shifts green → gold → orange as expiry nears, steel once cold | `💾 42m·94%`, `💾 cold·94%` |
-| **Usage (5h)** | 5-hour rate limit bar with reset timer, from Claude Code's native rate limit data | `⚡ 12% (4h 23m / 5h)` — bar fills green/yellow/red |
-| **Usage (7d)** | 7-day rolling rate limit | `7d 26%` |
+| **Usage (5h)** | 5-hour rate limit from Claude Code's native rate limit data, as a bar: the fill is the share used, the white tick is how much of the window has passed, and `↻` counts down to the reset. Fill past the tick means you are using the limit faster than the clock. The color shows that pace: green at or behind the clock, then gold, orange and red the further ahead. Near the end of a window it also warns when your current pace would run out before the reset, even while the fill is behind the tick, and the first half hour of a 5h window forgives a single big prompt. Crimson once the limit is hit, grey while the 7-day limit is hit | `⚡ 16%` bar `↻ 2h43m`, `⚡ 100%` bar `↻ 1h20m`, `⚡ resetting` |
+| **Usage (7d)** | 7-day rate limit as a bar with one cell per day, and `↻` counts down to the reset like the 5h bar. The tick marks the end of today, so a normal day's use reads as on pace. Same pace colors as the 5h bar. Shrinks to a chip without the bar and countdown when that saves its row a line | `7d 4%` bar `↻ 4d18h`, `7d 100%` bar `↻ 2d02h`, `7d 4%` |
 | **Spend limit** | Spend against a Claude apps gateway spend limit, in dollars once the gateway reports them | `💳 $314/$500`, `💳 63%` |
 | **Repo name** | Git repository name | `ccsl`, `my-project` |
 | **Branch / Worktree** | Current branch (🌿) or worktree (🌳). Main/master shown in purple | `🌿 main`, `🌿 feature/auth`, `🌳 fix-login` |
@@ -124,8 +124,8 @@ Configuration is stored in `~/.claude/statusline-config.json`. The `rows` array 
 {
   "rows": [
     ["identity", "usage"],
-    ["context", "usage7d", "config"],
-    ["git", "pr"],
+    ["context", "usage7d"],
+    ["git", "pr", "config"],
     "---",
     ["transcript", "tools"],
     ["agents"],
@@ -146,7 +146,7 @@ Each row is an array of badge group IDs. Use `"---"` for a separator line. Rows 
 | `identity` | Model/fast mode, effort, agent, duration, cost |
 | `context` | Context bar, token breakdown, prompt cache |
 | `usage` | 5-hour rate limit bar, spend limit |
-| `usage7d` | 7-day rate limit badge |
+| `usage7d` | 7-day rate limit bar |
 | `git` | Repo, branch, file stats, ahead/behind, lines |
 | `config` | CLAUDE.md count, MCPs, hooks |
 | `pr` | Ticket marker, PR link |
@@ -172,7 +172,7 @@ Three preset starting points (available via `ccsl setup`):
 | `compactThreshold` | Context % that triggers compact width in `full-until-compact` mode (1–99) | `85` |
 | `flexPadding` | Chars reserved for right-side notifications (all modes) | `50` |
 
-> **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets. A leftover `features` object from pre-0.4.0 configs is ignored; badge visibility is controlled entirely by `rows` now (drop `usage` from your rows to hide the rate limit bars).
+> **Backwards compatibility:** Old configs using `"layout": "dense"` / `"semantic"` / `"adaptive"` still work — they're mapped to equivalent row presets. A leftover `features` object from pre-0.4.0 configs is ignored; badge visibility is controlled entirely by `rows` now (drop `usage` and `usage7d` from your rows to hide the rate limit bars). A `rows` array saved from the 0.4.0 dense preset (by `ccsl setup`, or copied from this README) is read as the current dense preset.
 
 ### Width Modes
 

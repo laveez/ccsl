@@ -172,7 +172,7 @@ function ansiToHtml(text) {
     function style() {
         const p = [];
         if (fg) p.push(`color:${fg}`);
-        if (bg) p.push(`background:${bg};border-radius:3px`);
+        if (bg) p.push(`background:${bg}`);
         return p.join(";");
     }
 

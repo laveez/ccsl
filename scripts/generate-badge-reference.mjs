@@ -3,13 +3,13 @@
  * Generate badge reference image for README documentation.
  * Shows every badge type in all possible states.
  *
- * Requirements: playwright (npx/global)
+ * Requirements: playwright (npx/global), a build (npm run build)
  * Usage: node scripts/generate-badge-reference.mjs
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { tmpdir } from "node:os";
 
 const { chromium } = await import("playwright");
@@ -17,6 +17,7 @@ const { chromium } = await import("playwright");
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_DIR = dirname(__dirname);
 const DOCS_DIR = join(REPO_DIR, "docs");
+const { buildUsage5hBadge, buildUsage7dBadge } = await import(pathToFileURL(join(REPO_DIR, "dist/usage.js")).href);
 
 // Badge color palette (matches BADGE in types.ts)
 const C = {
@@ -51,6 +52,40 @@ function barBadge(prefix, pct, fillColor, text, badgeColor) {
         `<span class="bar-empty" style="width:${w - filled}px;background:${rgb(C.barBg)}"></span>` +
         `</span></span>`;
 }
+
+// The usage bars are drawn cell by cell, so they come from ccsl itself, converted from its ANSI output.
+function ansiBadge(ansi) {
+    let html = "", fg = null, bg = null;
+    for (const part of ansi.split(/(\x1b\[[0-9;]*m)/)) {
+        const codes = part.match(/^\x1b\[([0-9;]*)m$/);
+        if (!codes) {
+            if (part) html += `<span style="${bg ? `background:${bg};` : ""}${fg ? `color:${fg}` : ""}">${part}</span>`;
+            continue;
+        }
+        const p = codes[1].split(";").map(Number);
+        for (let i = 0; i < p.length; i++) {
+            if (p[i] === 0) fg = bg = null;
+            else if (p[i] === 97) fg = "#e1e4ed";
+            else if ((p[i] === 38 || p[i] === 48) && p[i + 1] === 2) {
+                const color = `rgb(${p[i + 2]},${p[i + 3]},${p[i + 4]})`;
+                if (p[i] === 38) fg = color; else bg = color;
+                i += 4;
+            }
+        }
+    }
+    return `<span class="ansi">${html}</span>`;
+}
+
+const MIN = 60_000, HOUR = 60 * MIN, DAY = 24 * HOUR;
+function usage(fiveHour, fiveHourLeft, sevenDay, sevenDayLeft) {
+    return {
+        fiveHour, sevenDay,
+        fiveHourResetAt: new Date(Date.now() + fiveHourLeft),
+        sevenDayResetAt: new Date(Date.now() + sevenDayLeft),
+    };
+}
+const usage5h = (used, left, weekly = 10) => ansiBadge(buildUsage5hBadge(usage(used, left, weekly, 3 * DAY))[0]);
+const usage7d = (used, left, compact = false) => ansiBadge(buildUsage7dBadge(usage(0, HOUR, used, left), compact)[0]);
 
 function gradient(t, c1, c2) {
     return c1.map((v, i) => Math.round(v + (c2[i] - v) * t));
@@ -121,17 +156,26 @@ badges.push(row("Prompt cache",
 
 // ── Usage ──
 badges.push(section("Usage Rate Limits"));
-badges.push(row("5h usage bar",
-    barBadge("⚡", 12, C.barGreen, " 12% (4h 23m / 5h) ", C.orange),
-    barBadge("⚡", 65, C.barYellow, " 65% (1h 45m / 5h) ", C.orange),
-    barBadge("⚡", 95, C.barRed, " 95% (15m / 5h) ", C.orange),
+badges.push(row("5h usage (pace)",
+    usage5h(16, 2 * HOUR + 43 * MIN),
+    usage5h(45, 3 * HOUR),
+    usage5h(52, 3 * HOUR),
+    usage5h(60, 3 * HOUR + 30 * MIN),
 ));
-badges.push(row("7d usage (gradient)",
-    badge("7d 10%", C.green),
-    badge("7d 26%", gradient(0.52, C.green, C.orange)),
-    badge("7d 50%", C.orange),
-    badge("7d 80%", gradient(0.5, C.orange, C.rose)),
-    badge("7d 95%", C.rose),
+badges.push(row("5h usage (limits)",
+    usage5h(100, HOUR + 20 * MIN),
+    usage5h(30, 2 * HOUR + 10 * MIN, 100),
+    usage5h(50, -MIN),
+));
+badges.push(row("7d usage (pace)",
+    usage7d(4, 4 * DAY + 18 * HOUR),
+    usage7d(55, 3 * DAY + 4 * HOUR),
+    usage7d(70, 4 * DAY),
+));
+badges.push(row("7d usage (limit, chip)",
+    usage7d(100, 2 * DAY + 2 * HOUR),
+    usage7d(4, 4 * DAY + 18 * HOUR, true),
+    usage7d(70, 4 * DAY, true),
 ));
 badges.push(row("Spend limit",
     badge("💳 $120/$500", gradient(0.48, C.green, C.orange)),
@@ -286,6 +330,11 @@ body {
 }
 .bar-badge {
     gap: 4px;
+}
+.ansi {
+    white-space: pre;
+    font-size: 12px;
+    color: #e1e4ed;
 }
 .bar {
     display: inline-flex;

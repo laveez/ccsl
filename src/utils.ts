@@ -31,7 +31,7 @@ export const RESET_ALL = "\x1b[0m";
 export const RESET_BG = "\x1b[49m";
 export const RESET_FG = "\x1b[39m";
 
-function fgRgb(r: number, g: number, b: number): string {
+export function fgRgb(r: number, g: number, b: number): string {
     return `\x1b[38;2;${r};${g};${b}m`;
 }
 

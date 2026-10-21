@@ -10,7 +10,6 @@ import type {
     ToolAggregation,
     AgentEntry,
     TodoItem,
-    UsageData,
     PromptCache,
     SpendLimit,
     UnifiedStatuslineData,
@@ -54,6 +53,7 @@ import {
     calculateCurrentTokens,
     getPercentUsed,
 } from "./utils.js";
+import { buildUsage5hBadge, buildUsage7dBadge } from "./usage.js";
 
 export function renderContextBar(percent: number, width: number = 10): string {
     const filled = Math.round((percent / 100) * width);
@@ -177,25 +177,6 @@ function buildPromptCacheBadge(cache: PromptCache | undefined): string[] {
         [0, BADGE.orange], [0.25, BADGE.gold], [1, BADGE.green],
     ], secondsLeft / ttl);
     return [badgeGradient(bg, `💾 ${formatTimeUntil(new Date(expiresAt * 1000))}${hit}`)];
-}
-
-function buildUsage5hBadge(usageData: UsageData | null): string[] {
-    if (!usageData || usageData.fiveHour === null) return [];
-    const fiveHour = Math.round(usageData.fiveHour);
-    const resetTime = formatTimeUntil(usageData.fiveHourResetAt);
-    const resetStr = resetTime ? ` (${resetTime} / 5h)` : "";
-    const barText = ` ${fiveHour}%${resetStr} `;
-    const inlineBar = renderBarWithText(fiveHour, barText);
-    return [badgeRich("orange", `${fgWhite()}⚡${inlineBar}`)];
-}
-
-function buildUsage7dBadge(usageData: UsageData | null): string[] {
-    if (!usageData || usageData.sevenDay === null) return [];
-    const sevenDay = Math.round(usageData.sevenDay);
-    const bg7d = gradientColor([
-        [0, BADGE.green], [50, BADGE.orange], [80, BADGE.rose],
-    ], sevenDay);
-    return [badgeGradient(bg7d, `7d ${sevenDay}%`)];
 }
 
 function buildSpendLimitBadge(spend: SpendLimit | undefined): string[] {
@@ -374,8 +355,13 @@ const badgeGroupBuilders: Record<BadgeGroup, BadgeGroupBuilder> = {
     todos: (data) => data.transcriptData?.todos?.length ? buildTodoBadges(data.transcriptData.todos) : [],
 };
 
-function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig): string[] {
+// `textOnly` swaps emoji for text before wrapping, so each line is measured as it prints.
+function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: CcslConfig, textOnly: boolean): string[] {
     const rows = config.rows ?? DEFAULT_ROWS;
+    const sep = resolveSeparator(config.badgeStyle);
+    const spacing = config.badgeSpacing !== false;
+    const prepare = (badges: string[]) => textOnly ? badges.map(stripEmojis) : badges;
+    const lineCount = (badges: string[]) => joinSegmentsWithWrap(badges, maxWidth, spacing, sep).split("\n").length;
     const lines: string[] = [];
     for (const row of rows) {
         if (row === "---") {
@@ -384,14 +370,17 @@ function buildRowLayout(data: UnifiedStatuslineData, maxWidth: number, config: C
             continue;
         }
 
-        const badges: string[] = [];
-        for (const group of row) {
-            const builder = badgeGroupBuilders[group];
-            if (builder) badges.push(...builder(data));
+        const groupBadges = row.map(group => prepare(badgeGroupBuilders[group]?.(data) ?? []));
+        let badges = groupBadges.flat();
+        const usage7dAt = row.indexOf("usage7d");
+        if (usage7dAt >= 0) {
+            // The 7d bar shrinks to its chip when that saves the row a line.
+            const chip = prepare(buildUsage7dBadge(data.usageData, true));
+            const withChip = groupBadges.map((g, i) => i === usage7dAt ? chip : g).flat();
+            if (lineCount(withChip) < lineCount(badges)) badges = withChip;
         }
         if (badges.length > 0) {
-            const sep = resolveSeparator(config.badgeStyle);
-            lines.push(joinSegmentsWithWrap(badges, maxWidth, config.badgeSpacing !== false, sep));
+            lines.push(joinSegmentsWithWrap(badges, maxWidth, spacing, sep));
         }
     }
 
@@ -420,6 +409,22 @@ function parseRows(rawRows: unknown): RowConfig | undefined {
     return result.length > 0 ? result : undefined;
 }
 
+// ccsl setup saves a preset as a full rows array, so a saved copy of the dense preset from before the 7d bar
+// moved the config badge to the git row follows the current one.
+const PREVIOUS_DENSE: RowConfig = [
+    ["identity", "usage"],
+    ["context", "usage7d", "config"],
+    ["git", "pr"],
+    "---",
+    ["transcript", "tools"],
+    ["agents"],
+    ["todos"],
+];
+
+function migrateRows(rows: RowConfig | undefined): RowConfig | undefined {
+    return rows && JSON.stringify(rows) === JSON.stringify(PREVIOUS_DENSE) ? PRESET_DENSE : rows;
+}
+
 function layoutToRows(layout: string): RowConfig {
     switch (layout) {
         case "semantic": return PRESET_SEMANTIC;
@@ -445,7 +450,7 @@ export function readStatuslineConfig(): CcslConfig {
         const validFlexMode = (flexMode === "full" || flexMode === "full-minus-40" || flexMode === "full-until-compact")
             ? flexMode
             : undefined;
-        const rows = parseRows(config.rows) ?? layoutToRows(validLayout);
+        const rows = migrateRows(parseRows(config.rows)) ?? layoutToRows(validLayout);
         return {
             layout: validLayout,
             rows,
@@ -465,11 +470,7 @@ export function buildStatuslineOutput(
     termWidth: number = 0,
     config: CcslConfig = readStatuslineConfig(),
 ): string {
-    let lines = buildRowLayout(data, maxWidth, config);
-
-    if (termWidth > 0 && termWidth < 80) {
-        lines = lines.map(line => stripEmojis(line));
-    }
+    const lines = buildRowLayout(data, maxWidth, config, termWidth > 0 && termWidth < 80);
 
     const ERASE_TO_EOL = "\x1b[K";
     const RESET_PREFIX = "\x1b[0m";

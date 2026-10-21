@@ -155,7 +155,7 @@ const BADGE_DESCRIPTIONS: Record<BadgeGroup, string> = {
     identity: "Model, effort, agent, duration, cost",
     context: "Context bar, token breakdown, prompt cache",
     usage: "5h rate limit bar, spend limit",
-    usage7d: "7d rate limit badge",
+    usage7d: "7d rate limit bar",
     git: "Repo, branch, file stats",
     config: "CLAUDE.md, MCPs, hooks",
     pr: "Ticket marker, PR link",
